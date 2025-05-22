@@ -37,7 +37,8 @@ def generate_recommendation(prediction_label):
         2: """High Risk: Immediate medical attention advised.
         Begin treatment under supervision.""",
     }
-    return recommendations.get(prediction_label, "No recommendation available.")
+    return recommendations.get(
+        prediction_label, "No recommendation available.")
 
 
 # Dashboard layout
@@ -80,8 +81,10 @@ with tab1:
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown(
-                    f"""### 🧠 Predicted Health Risk Level: **{
-                        ['Low', 'Medium', 'High'][prediction]}**"""
+                    f"""
+                    ### 🧠 Predicted Health Risk Level: **{
+                        ['Low', 'Medium', 'High'][prediction]}**
+                        """
                 )
                 st.success(f"✅ Recommended Action: {recommendation}")
 
@@ -185,7 +188,10 @@ with tab3:
 
     # Pairplot
     st.markdown("### Feature Relationships")
-    st.image("images/pairplot.png", caption="Pairplot of Features by Risk Class")
+    st.image(
+        "images/pairplot.png",
+        caption="Pairplot of Features by Risk Class"
+        )
 
 
 with tab4:
@@ -213,4 +219,5 @@ with tab4:
     )
 
     st.markdown("---")
-    st.markdown("Developed by [Jayanth] | [UnifiedMentor]")
+    st.markdown("""Developed by **Jayanth**, Full Stack Developer |
+        🚀 [GitHub](https://github.com/Jayanth2323)""")
