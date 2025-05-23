@@ -3,6 +3,12 @@ import pandas as pd
 import joblib
 import plotly.express as px
 
+st.set_page_config(
+    page_title="Healthcare Recommendation System",
+    layout="wide",
+    page_icon="🩺"
+)
+
 
 # === Load Model and Data ===
 @st.cache_resource
@@ -52,9 +58,7 @@ def generate_recommendation(prediction_label):
 
 
 # === UI Config ===
-st.set_page_config(
-    page_title="Healthcare Recommendation System", layout="wide", page_icon="🩺"
-)
+
 
 # === Sidebar Inputs ===
 st.sidebar.title("Patient Input Parameters")
@@ -250,5 +254,5 @@ with tab4:
     st.markdown(
         """
         Developed by **Jayanth**, Full Stack Developer |
-        🚀 [GitHub](https://github.com/Jayanth2323)"""
+        🚀 [GitHub](https://github.com/Jayanth2323/HealthCare)"""
     )
