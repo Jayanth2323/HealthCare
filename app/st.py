@@ -3,6 +3,7 @@ import pandas as pd
 import joblib
 import plotly.express as px
 import plotly.graph_objects as go
+import openai
 
 st.set_page_config(
     page_title="AI Healthcare Advisor",
@@ -55,7 +56,7 @@ st.markdown("Empowering health decisions through machine intelligence.")
 
 # === Tabs ===
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🧬 Recommendation Engine", "📊 Data Intelligence", "🔍 Model Insights", "🧠 AI Chat Assistant", "ℹ️ About"
+    "🧬 Recommendation Engine", "📊 Data Intelligence", "🔍 Model Insights", "🤖 AI Chat Assistant", "ℹ️ About"
 ])
 
 # === Tab 1: Recommendation ===
@@ -103,7 +104,7 @@ with tab1:
             Risk Level: {['Low', 'Medium', 'High'][prediction]}
             Confidence: {confidence}
             Recommendation: {recommendation}
-            
+
             Metrics:
             - Visit Frequency: {frequency}
             - Spending: ${monetary}
@@ -166,8 +167,24 @@ with tab3:
 
 # === Tab 4: LLM Chat Assistant ===
 with tab4:
-    st.subheader("🤖 AI Chat Assistant (Coming Soon)")
-    st.info("This section will enable conversational health advice using large language models. Stay tuned!")
+    st.subheader("🤖 AI Chat Assistant")
+    st.markdown("""
+    🧠 Ask your health-related queries and get answers powered by advanced AI.
+    """)
+    user_input = st.text_area("💬 Enter your health question:")
+    if st.button("🚀 Ask AI"):
+        with st.spinner("Thinking..."):
+            try:
+                response = openai.ChatCompletion.create(
+                    model="gpt-4",
+                    messages=[
+                        {"role": "system", "content": "You are a helpful AI healthcare assistant."},
+                        {"role": "user", "content": user_input}
+                    ]
+                )
+                st.success(response.choices[0].message.content)
+            except Exception as e:
+                st.error("Error fetching AI response. Please check your API configuration.")
 
 # === Tab 5: About ===
 with tab5:
@@ -179,12 +196,14 @@ with tab5:
     - Logistic Regression Model
     - Streamlit for UI
     - Plotly for Visualization
+    - OpenAI LLM for conversational assistance
 
     **Key Features:**
     - Confidence-based prediction
     - Feature impact explanations
     - Visual health metrics comparison
     - Downloadable recommendation reports
+    - Conversational AI for health inquiries
 
     **Developed by:** Jayanth | Full Stack Developer & AI Enthusiast
     🔗 [GitHub Repository](https://github.com/Jayanth2323/HealthCare)
