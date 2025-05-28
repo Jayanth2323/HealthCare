@@ -231,14 +231,14 @@ with tab4:
         "🧠 Ask your health-related queries and get answers powered by Gemini AI."
     )
 
-    model = ["gemini-1.5-flash-latest"]
-    selected_model = st.selectbox(model)
+    model_list = ("gemini-1.5-flash-latest")
+    # selected_model = st.selectbox(model_list)
     user_input = st.text_area("💬 Enter your health question:")
 
     if st.button("🚀 Ask AI"):
         with st.spinner("Thinking..."):
             try:
-                model = genai.GenerativeModel(model_name=selected_model)
+                model = genai.GenerativeModel(model_name=model_list)
                 chat = model.start_chat(history=[])
                 response = chat.send_message(user_input)
                 st.success("✅ Response received:")
