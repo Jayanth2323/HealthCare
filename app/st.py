@@ -237,20 +237,14 @@ with tab4:
     )
 
     user_input = st.text_area("💬 Enter your health question:")
+    models = genai.list_models()
+    for m in models:
+        st.write(m.name)
     if st.button("🚀 Ask AI"):
         with st.spinner("Thinking..."):
             try:
-                model = genai.GenerativeModel("gemini-pro")
-                chat = model.start_chat(
-                    history=[
-                        {
-                            "role": "user",
-                            "parts": [
-                                "You are a professional AI healthcare assistant."
-                            ],
-                        },
-                    ]
-                )
+                model = genai.GenerativeModel(model_name="models/gemini-pro")
+                chat = model.start_chat(history=[])
                 response = chat.send_message(user_input)
                 reply = response.text
                 st.write(reply)
