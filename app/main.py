@@ -4,7 +4,7 @@ import joblib
 import plotly.express as px
 from datetime import datetime
 
-st.set_page_config(page_title="AI Healthcare Advisor", layout="wide", page_icon="🧠")
+st.set_page_config(page_title="Personalized Healthcare Advisor", layout="wide", page_icon="🧠")
 
 
 # === Load Model and Data ===
@@ -53,7 +53,7 @@ monetary = st.sidebar.slider("💵 Healthcare Spending ($/year)", 0, 10000, 500)
 time = st.sidebar.slider("⏳ Time Since Last Visit (months)", 0, 60, 12)
 
 # === Main UI ===
-st.title("🧠 AI-Powered Healthcare Recommendation System")
+st.title("🧠 Personalized-Powered Healthcare Recommendation System")
 
 # === Tabs ===
 tab1, tab2, tab3, tab4 = st.tabs(
@@ -206,10 +206,10 @@ with tab3:
 
 # === Tab 4: About ===
 with tab4:
-    st.header("ℹ️ About This AI Dashboard")
+    st.header("ℹ️ About This Personalized HealthCare Dashboard")
     st.markdown(
         """
-    ### 🧠 AI-Driven Personalized Healthcare Advisor
+    ### 🧠 Personalized Healthcare Advisor
     This system leverages logistic regression to assess individual health risk based on historical clinical and financial usage.
 
     **Features**:
