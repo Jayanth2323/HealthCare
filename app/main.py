@@ -4,7 +4,7 @@ import joblib
 import plotly.express as px
 import datetime
 
-st.set_page_config(page_title="AI Healthcare Assistant", layout="wide", page_icon="🧠")
+st.set_page_config(page_title="PersonalizedHealthcare Assistant", layout="wide", page_icon="🧠")
 
 
 # === Load Model and Data ===
@@ -53,7 +53,7 @@ st.sidebar.write("### Current Date & Time")
 st.sidebar.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
 # === Main Title ===
-st.title("🧠 AI-Powered Personalized Healthcare Assistant")
+st.title("🧠 Personalized Healthcare Assistant")
 st.markdown("### Experience smarter, data-driven health guidance.")
 
 # === Tabs ===
@@ -195,13 +195,13 @@ with tab3:
 
 # === Tab 4: About ===
 with tab4:
-    st.header("ℹ️ About This AI Assistant")
+    st.header("ℹ️ About This Healthcare Assistant")
     st.markdown(
         """
-    ### AI-Powered Personalized Healthcare Dashboard
+    ### Personalized Healthcare Dashboard
     This interactive tool provides:
     - Personalized health risk assessments
-    - AI-generated lifestyle recommendations
+    - Personalized lifestyle recommendations
     - Visual comparisons with population averages
 
     **Technology Stack:**
