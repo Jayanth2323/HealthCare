@@ -4,7 +4,9 @@ import joblib
 import plotly.express as px
 from datetime import datetime
 
-st.set_page_config(page_title="Personalized Healthcare Advisor", layout="wide", page_icon="🧠")
+st.set_page_config(
+    page_title="Personalized Healthcare Advisor", layout="wide", page_icon="🧠"
+)
 
 
 # === Load Model and Data ===
