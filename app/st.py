@@ -15,16 +15,13 @@ if not api_key:
         "❌ Gemini API key not found. Please set GOOGLE_API_KEY in your .env file."
     )
     st.stop()
-
 genai.configure(api_key=api_key)
-
 
 # === Streamlit Config ===
 st.set_page_config(page_title="AI Healthcare Advisor", layout="wide", page_icon="🧠")
 
+
 # === Load Model and Data ===
-
-
 @st.cache_resource
 def load_model():
     try:
@@ -52,9 +49,8 @@ if df.empty:
     st.warning("⚠️ No data available to display. Please verify your dataset.")
     st.stop()
 
+
 # === Recommendation Logic ===
-
-
 def generate_recommendation(prediction_label):
     recommendations = {
         0: "✅ **Low Risk**\nMaintain your current healthy lifestyle. Annual check-ups recommended.",
@@ -85,10 +81,9 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(
     ]
 )
 
-# === Tab 1: Recommendation ===
+# === Tab 1: Recommendation Engine ===
 with tab1:
     st.subheader("Your Personalized Health Recommendation")
-
     if st.sidebar.button("💡 Generate Recommendation"):
         input_data = pd.DataFrame(
             {"Frequency": [frequency], "Monetary": [monetary], "Time": [time]}
@@ -182,7 +177,7 @@ with tab1:
     else:
         st.info("👈 Set parameters in the sidebar and click 'Generate Recommendation'")
 
-# === Tab 2: Data Overview ===
+# === Tab 2: Data Intelligence ===
 with tab2:
     st.subheader("📂 Dataset Overview")
     col1, col2 = st.columns(2)
@@ -201,7 +196,7 @@ with tab2:
         st.markdown("#### Missing Data")
         st.dataframe(df.isnull().sum().to_frame(name="Missing Values"))
 
-# === Tab 3: Model Analysis ===
+# === Tab 3: Model Insights ===
 with tab3:
     st.subheader("📈 Model Performance & Interpretability")
 
@@ -229,25 +224,25 @@ with tab3:
     st.markdown("#### Pairwise Feature Relationships")
     st.image("images/pairplot.png", caption="Pairplot of Feature Interactions")
 
-# === Tab 4: LLM Chat Assistant ===
+# === Tab 4: AI Chat Assistant ===
 with tab4:
     st.subheader("🤖 AI Chat Assistant")
     st.markdown(
-        "🧠 Ask your health-related queries and get answers powered by advanced AI."
+        "🧠 Ask your health-related queries and get answers powered by Gemini AI."
     )
 
+    model_list = ["gemini-pro", "gemini-1.5-flash-latest"]
+    selected_model = st.selectbox("Choose a Gemini model:", model_list)
     user_input = st.text_area("💬 Enter your health question:")
-    models = genai.list_models()
-    for m in models:
-        st.write(m.name)
+
     if st.button("🚀 Ask AI"):
         with st.spinner("Thinking..."):
             try:
-                model = genai.GenerativeModel(model_name="models/gemini-pro")
+                model = genai.GenerativeModel(model_name=selected_model)
                 chat = model.start_chat(history=[])
                 response = chat.send_message(user_input)
-                reply = response.text
-                st.write(reply)
+                st.success("✅ Response received:")
+                st.markdown(response.text)
             except Exception as e:
                 st.error(f"Error fetching AI response: {str(e)}")
 
@@ -256,22 +251,22 @@ with tab5:
     st.subheader("ℹ️ About This Application")
     st.markdown(
         """
-        This AI-powered dashboard provides real-time personalized healthcare recommendations based on user inputs.
+    This AI-powered dashboard provides real-time personalized healthcare recommendations based on user inputs.
 
-        **Technologies Used:**
-        - Logistic Regression Model
-        - Streamlit for UI
-        - Plotly for Visualization
-        - OpenAI LLM for conversational assistance
+    **Technologies Used:**
+    - Logistic Regression Model
+    - Streamlit for UI
+    - Plotly for Visualization
+    - Google Gemini AI for conversational assistance
 
-        **Key Features:**
-        - Confidence-based prediction
-        - Feature impact explanations
-        - Visual health metrics comparison
-        - Downloadable recommendation reports
-        - Conversational AI for health inquiries
+    **Key Features:**
+    - Confidence-based prediction
+    - Feature impact explanations
+    - Visual health metrics comparison
+    - Downloadable recommendation reports
+    - Conversational AI for health inquiries
 
-        **Developed by:** Jayanth | Full Stack Developer & AI Enthusiast  
-        🔗 [GitHub Repository](https://github.com/Jayanth2323/HealthCare)
-        """
+    **Developed by:** Jayanth | Full Stack Developer & AI Enthusiast  
+    🔗 [GitHub Repository](https://github.com/Jayanth2323/HealthCare)
+    """
     )
