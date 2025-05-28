@@ -231,8 +231,8 @@ with tab4:
         "🧠 Ask your health-related queries and get answers powered by Gemini AI."
     )
 
-    model_list = ["gemini-pro", "gemini-1.5-flash-latest"]
-    selected_model = st.selectbox("Choose a Gemini model:", model_list)
+    model = ["gemini-1.5-flash-latest"]
+    selected_model = st.selectbox(model)
     user_input = st.text_area("💬 Enter your health question:")
 
     if st.button("🚀 Ask AI"):
