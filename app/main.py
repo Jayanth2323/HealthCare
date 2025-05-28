@@ -254,8 +254,8 @@ with tab4:
     st.markdown(
         """
         Developed by **Jayanth**, Full Stack Developer |
+        Python Enthusiast |
         Data Scientist | 
-        Machine Learning Enthusiast | 
-        Python Enthusiast
+        Machine Learning Enthusiast         
         🚀 [GitHub](https://github.com/Jayanth2323/HealthCare)"""
     )
