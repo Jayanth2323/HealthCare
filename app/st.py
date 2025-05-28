@@ -4,29 +4,37 @@ import pandas as pd
 import joblib
 import plotly.express as px
 import plotly.graph_objects as go
-from openai import OpenAI
+import google.generativeai as genai
 from dotenv import load_dotenv
 
 # === Load API Key Securely ===
 load_dotenv()
-api_key = os.getenv("OPENAI_API_KEY")
+api_key = os.getenv("GOOGLE_API_KEY")
 if not api_key:
-    st.error("❌ OpenAI API key not found. Please set it in your .env file.")
+    st.error(
+        "❌ Gemini API key not found. Please set GOOGLE_API_KEY in your .env file."
+    )
     st.stop()
 
-client = OpenAI(api_key=api_key)
+genai.configure(api_key=api_key)
+
 
 # === Streamlit Config ===
 st.set_page_config(page_title="AI Healthcare Advisor", layout="wide", page_icon="🧠")
 
 # === Load Model and Data ===
+
+
 @st.cache_resource
 def load_model():
     try:
         return joblib.load("models/logistic_regression_pipeline.pkl")
     except FileNotFoundError:
-        st.error("❌ Model file not found. Please check 'models/logistic_regression_pipeline.pkl'.")
+        st.error(
+            "❌ Model file not found. Please check 'models/logistic_regression_pipeline.pkl'."
+        )
         return None
+
 
 @st.cache_data
 def load_data():
@@ -36,6 +44,7 @@ def load_data():
         st.error("❌ Data file not found. Please check 'data/cleaned_blood_data.csv'.")
         return pd.DataFrame()
 
+
 model = load_model()
 df = load_data()
 
@@ -44,6 +53,8 @@ if df.empty:
     st.stop()
 
 # === Recommendation Logic ===
+
+
 def generate_recommendation(prediction_label):
     recommendations = {
         0: "✅ **Low Risk**\nMaintain your current healthy lifestyle. Annual check-ups recommended.",
@@ -51,6 +62,7 @@ def generate_recommendation(prediction_label):
         2: "🚨 **High Risk**\nImmediate medical attention advised. Begin treatment under supervision.",
     }
     return recommendations.get(prediction_label, "❓ No recommendation available.")
+
 
 # === Sidebar Inputs ===
 st.sidebar.header("📝 Patient Profile")
@@ -64,7 +76,13 @@ st.markdown("Empowering health decisions through machine intelligence.")
 
 # === Tabs ===
 tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["🧬 Recommendation Engine", "📊 Data Intelligence", "🔍 Model Insights", "🤖 AI Chat Assistant", "ℹ️ About"]
+    [
+        "🧬 Recommendation Engine",
+        "📊 Data Intelligence",
+        "🔍 Model Insights",
+        "🤖 AI Chat Assistant",
+        "ℹ️ About",
+    ]
 )
 
 # === Tab 1: Recommendation ===
@@ -72,7 +90,9 @@ with tab1:
     st.subheader("Your Personalized Health Recommendation")
 
     if st.sidebar.button("💡 Generate Recommendation"):
-        input_data = pd.DataFrame({"Frequency": [frequency], "Monetary": [monetary], "Time": [time]})
+        input_data = pd.DataFrame(
+            {"Frequency": [frequency], "Monetary": [monetary], "Time": [time]}
+        )
         prediction = model.predict(input_data)[0]
         probs = model.predict_proba(input_data)[0]
         confidence = f"{probs[prediction]*100:.2f}%"
@@ -89,13 +109,20 @@ with tab1:
             features = ["Frequency", "Monetary", "Time"]
             try:
                 classifier_step = next(
-                    step for step in model.named_steps if hasattr(model.named_steps[step], "coef_")
+                    step
+                    for step in model.named_steps
+                    if hasattr(model.named_steps[step], "coef_")
                 )
                 importance = model.named_steps[classifier_step].coef_[0]
             except Exception:
                 importance = [0, 0, 0]
 
-            fig_imp = px.bar(x=features, y=importance, labels={"x": "Features", "y": "Weight"}, title="Feature Contribution to Risk")
+            fig_imp = px.bar(
+                x=features,
+                y=importance,
+                labels={"x": "Features", "y": "Weight"},
+                title="Feature Contribution to Risk",
+            )
             st.plotly_chart(fig_imp, use_container_width=True)
 
             report = f"""
@@ -110,20 +137,47 @@ with tab1:
             - Spending: ${monetary}
             - Time Since Last Visit: {time} months
             """
-            st.download_button("📥 Download Report", report, file_name="health_report.txt")
+            st.download_button(
+                "📥 Download Report", report, file_name="health_report.txt"
+            )
 
         with col2:
             st.markdown("#### 🧾 Your Health Snapshot")
             patient_data = pd.DataFrame(
-                {"Metric": ["Visit Frequency", "Spending", "Time Since Last Visit"], "Value": [frequency, monetary, time]}
+                {
+                    "Metric": ["Visit Frequency", "Spending", "Time Since Last Visit"],
+                    "Value": [frequency, monetary, time],
+                }
             )
 
-            avg_values = [df["Frequency"].mean(), df["Monetary"].mean(), df["Time"].mean()]
+            avg_values = [
+                df["Frequency"].mean(),
+                df["Monetary"].mean(),
+                df["Time"].mean(),
+            ]
 
             fig_patient = go.Figure()
-            fig_patient.add_trace(go.Bar(x=patient_data["Metric"], y=patient_data["Value"], name="You", text=patient_data["Value"], textposition="auto"))
-            fig_patient.add_trace(go.Scatter(x=patient_data["Metric"], y=avg_values, mode="markers+lines", name="Population Avg", marker=dict(size=10, color="red")))
-            fig_patient.update_layout(title="Your Metrics vs Population Averages", barmode="group")
+            fig_patient.add_trace(
+                go.Bar(
+                    x=patient_data["Metric"],
+                    y=patient_data["Value"],
+                    name="You",
+                    text=patient_data["Value"],
+                    textposition="auto",
+                )
+            )
+            fig_patient.add_trace(
+                go.Scatter(
+                    x=patient_data["Metric"],
+                    y=avg_values,
+                    mode="markers+lines",
+                    name="Population Avg",
+                    marker=dict(size=10, color="red"),
+                )
+            )
+            fig_patient.update_layout(
+                title="Your Metrics vs Population Averages", barmode="group"
+            )
             st.plotly_chart(fig_patient, use_container_width=True)
     else:
         st.info("👈 Set parameters in the sidebar and click 'Generate Recommendation'")
@@ -152,12 +206,24 @@ with tab3:
     st.subheader("📈 Model Performance & Interpretability")
 
     st.markdown("#### Correlation Heatmap")
-    fig_corr = px.imshow(df.corr(numeric_only=True), title="Feature Correlations", color_continuous_scale="RdBu")
+    fig_corr = px.imshow(
+        df.corr(numeric_only=True),
+        title="Feature Correlations",
+        color_continuous_scale="RdBu",
+    )
     st.plotly_chart(fig_corr, use_container_width=True)
 
     st.markdown("#### Feature Distributions")
-    feature = st.selectbox("Select a feature to visualize:", ["Frequency", "Monetary", "Time"])
-    fig_dist = px.box(df, x="Class", y=feature, color="Class", title=f"{feature} Distribution by Risk Class")
+    feature = st.selectbox(
+        "Select a feature to visualize:", ["Frequency", "Monetary", "Time"]
+    )
+    fig_dist = px.box(
+        df,
+        x="Class",
+        y=feature,
+        color="Class",
+        title=f"{feature} Distribution by Risk Class",
+    )
     st.plotly_chart(fig_dist, use_container_width=True)
 
     st.markdown("#### Pairwise Feature Relationships")
@@ -166,21 +232,28 @@ with tab3:
 # === Tab 4: LLM Chat Assistant ===
 with tab4:
     st.subheader("🤖 AI Chat Assistant")
-    st.markdown("🧠 Ask your health-related queries and get answers powered by advanced AI.")
+    st.markdown(
+        "🧠 Ask your health-related queries and get answers powered by advanced AI."
+    )
 
     user_input = st.text_area("💬 Enter your health question:")
     if st.button("🚀 Ask AI"):
         with st.spinner("Thinking..."):
             try:
-                chat_response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": "You are a professional AI healthcare assistant."},
-                        {"role": "user", "content": user_input},
-                    ],
+                model = genai.GenerativeModel("gemini-pro")
+                chat = model.start_chat(
+                    history=[
+                        {
+                            "role": "user",
+                            "parts": [
+                                "You are a professional AI healthcare assistant."
+                            ],
+                        },
+                    ]
                 )
-                reply = chat_response.choices[0].message.content
-                st.success(reply)
+                response = chat.send_message(user_input)
+                reply = response.text
+                st.write(reply)
             except Exception as e:
                 st.error(f"Error fetching AI response: {str(e)}")
 
