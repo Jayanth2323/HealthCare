@@ -10,7 +10,6 @@ import streamlit.components.v1 as components
 from dotenv import load_dotenv
 from fpdf import FPDF
 
-
 # === Load API Key ===
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
@@ -45,13 +44,29 @@ if df.empty:
     st.warning("⚠️ No data loaded. Please check your dataset.")
     st.stop()
 
-
+# === SHAP Visualization Helper ===
 def st_shap(plot, height=None):
     shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
     components.html(shap_html, height=height or 500, scrolling=True)
 
+# === PDF Generator ===
+def generate_pdf_report(health_summary, ai_response):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.multi_cell(0, 10, "AI Healthcare Summary Report", align="C")
+    pdf.ln()
+    pdf.multi_cell(0, 10, health_summary)
+    pdf.ln()
+    pdf.set_font("Arial", 'B', size=12)
+    pdf.cell(0, 10, "Gemini's Treatment Recommendations:", ln=True)
+    pdf.set_font("Arial", size=12)
+    pdf.multi_cell(0, 10, ai_response)
+    output_path = "./data/health_report.pdf"
+    pdf.output(output_path)
+    return output_path
 
-# === Recommendation Logic ===
+# === Recommendation Mapping ===
 def generate_recommendation(pred_label):
     return {
         0: "✅ **Low Risk**\nMaintain your current healthy lifestyle. Annual check-ups recommended.",
@@ -59,13 +74,13 @@ def generate_recommendation(pred_label):
         2: "🚨 **High Risk**\nImmediate medical attention advised. Begin treatment under supervision.",
     }.get(pred_label, "❓ No recommendation available.")
 
-# === Sidebar ===
+# === Sidebar Inputs ===
 st.sidebar.header("📝 Patient Profile")
 frequency = st.sidebar.slider("📅 Visit Frequency (visits/year)", 0, 50, 5)
 monetary = st.sidebar.slider("💸 Annual Healthcare Spending ($)", 0, 10000, 500)
 time = st.sidebar.slider("⏳ Time Since Last Visit (months)", 0, 60, 12)
 
-# === Main Interface ===
+# === Main Page ===
 st.title("🧠 AI-Driven Personalized Healthcare Advisor")
 st.markdown("Empowering health decisions through machine intelligence.")
 
@@ -82,52 +97,35 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 with tab1:
     st.subheader("Your Personalized Health Recommendation")
 
-    # === Upload for Batch Prediction
-    st.markdown("#### 📁 Upload Patient Dataset (CSV)")
-    uploaded_file = st.file_uploader("Upload CSV for batch processing:", type=["csv"])
+    # Upload patient dataset for batch prediction
+    uploaded_file = st.file_uploader("📁 Upload CSV for batch processing:", type=["csv"])
     if uploaded_file:
-        uploaded_df = pd.read_csv(uploaded_file)
-        uploaded_df["Prediction"] = model.predict(uploaded_df)
-        st.dataframe(uploaded_df)
-        st.download_button("📥 Download Predictions", uploaded_df.to_csv(index=False), "batch_predictions.csv")
+        batch_data = pd.read_csv(uploaded_file)
+        batch_data["Prediction"] = model.predict(batch_data)
+        st.dataframe(batch_data)
+        st.download_button("📥 Download Predictions", batch_data.to_csv(index=False), "batch_predictions.csv")
 
-    # === Individual Recommendation
+    # Individual Recommendation
     if st.sidebar.button("💡 Generate Recommendation"):
-        def generate_pdf_report(health_summary, ai_response):
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", size=12)
-            pdf.multi_cell(0, 10, "AI Healthcare Summary Report", align="C")
-            pdf.ln()
-            pdf.multi_cell(0, 10, health_summary)
-            pdf.ln()
-            pdf.set_font("Arial", 'B', size=12)
-            pdf.cell(0, 10, "Gemini's Treatment Recommendations:", ln=True)
-            pdf.set_font("Arial", size=12)
-            pdf.multi_cell(0, 10, ai_response)
-            pdf_output = "healthcare_ai_report.pdf"
-            pdf.output(pdf_output)
-            return pdf_output
-
         input_df = pd.DataFrame({"Frequency": [frequency], "Monetary": [monetary], "Time": [time]})
         prediction = model.predict(input_df)[0]
         probs = model.predict_proba(input_df)[0]
         confidence = f"{probs[prediction]*100:.2f}%"
         recommendation = generate_recommendation(prediction)
 
+        # Build health summary
         health_summary = f"""
         Patient Health Summary:
         - Risk Level: {['Low', 'Medium', 'High'][prediction]}
         - Confidence: {confidence}
-        - Recommendation: {
-            recommendation.replace('**', '').replace('✅', '').replace('⚠️', '').replace('🚨', '')}
+        - Recommendation: {recommendation.replace('**', '').replace('✅', '').replace('⚠️', '').replace('🚨', '')}
         - Visit Frequency: {frequency}
         - Healthcare Spending: ${monetary}
         - Time Since Last Visit: {time} months
         """
         st.session_state["health_summary"] = health_summary
 
-        # === Jake AI Auto Treatment Analysis
+        # Gemini AI Treatment Suggestion
         with st.spinner("🔬 Analyzing treatment options using Jake AI..."):
             try:
                 model_ai = genai.GenerativeModel("gemini-1.5-flash-latest")
@@ -144,43 +142,31 @@ with tab1:
                 st.markdown("### 🧠 Jake's Auto Analysis")
                 st.success("✅ AI-driven treatment suggestions:")
                 st.markdown(ai_response.text)
+
+                # PDF Export
                 pdf_file = generate_pdf_report(health_summary, ai_response.text)
                 with open(pdf_file, "rb") as f:
-                    st.download_button(
-                        "📄 Download Full PDF Report", f, file_name=pdf_file, mime="application/pdf")
+                    st.download_button("📄 Download Full PDF Report", f, file_name="health_report.pdf", mime="application/pdf")
 
                 st.download_button("📥 Download Treatment Plan", ai_response.text, "treatment_plan.txt")
             except Exception as e:
                 st.error(f"Jake AI Error: {e}")
 
-        # === Visuals & Report
+        # Visualizations
         col1, col2 = st.columns(2)
 
         with col1:
             st.metric("Predicted Risk Level", ["Low", "Medium", "High"][prediction])
-            st.metric("Confidence Score", confidence)
+            st.metric("Prediction Confidence", confidence)
             st.markdown(recommendation)
 
-            st.markdown("#### 🔍 Feature Impact")
-            # === SHAP Explainability
-            st.markdown("#### 🧠 Model Explainability (SHAP)")
-            with st.expander("Show SHAP values"):
-                try:
-                    classifier_step = next(step for step in model.named_steps if hasattr(model.named_steps[step], "coef_"))
-                    classifier = model.named_steps[classifier_step]
-                    importance = classifier.coef_[0]
-                except Exception:
-                    classifier_step = None
-                    classifier = None
-                    importance = [0, 0, 0]
-
-                    # shap_values = explainer(input_df)
-                    # st_shap(shap.plots.waterfall(shap_values[0]))
-                except Exception as e:
-                    st.warning(f"SHAP could not be generated: {str(e)}")
-            # try:
-            #     step = next(step for step in model.named_steps if hasattr(model.named_steps[step], "coef_"))
-            #     importance = model.named_steps[step].coef_[0]
+            # Feature Importance
+            try:
+                classifier_step = next(step for step in model.named_steps if hasattr(model.named_steps[step], "coef_"))
+                classifier = model.named_steps[classifier_step]
+                importance = classifier.coef_[0]
+            except Exception:
+                importance = [0, 0, 0]
 
             fig_imp = px.bar(
                 x=["Frequency", "Monetary", "Time"],
@@ -190,19 +176,16 @@ with tab1:
             )
             st.plotly_chart(fig_imp, use_container_width=True)
 
-            full_report = f"""
-            🔍 **AI Healthcare Report**
-            --------------------------
-            Risk Level: {['Low', 'Medium', 'High'][prediction]}
-            Confidence: {confidence}
-            Recommendation: {recommendation}
-
-            Metrics:
-            - Frequency: {frequency}
-            - Monetary: ${monetary}
-            - Time Since Last Visit: {time} months
-            """
-            st.download_button("📥 Download Health Report", full_report, "health_report.txt")
+            # SHAP Explainability (fixed)
+            st.markdown("#### 🧠 Model Explainability (SHAP)")
+            with st.expander("Show SHAP values"):
+                try:
+                    preprocessed_input = model[:-1].transform(input_df)
+                    explainer = shap.LinearExplainer(classifier, preprocessed_input)
+                    shap_values = explainer(preprocessed_input)
+                    st_shap(shap.plots.waterfall(shap_values[0]))
+                except Exception as e:
+                    st.warning(f"SHAP could not be generated: {str(e)}")
 
         with col2:
             st.markdown("#### 📊 Your Health Snapshot")
@@ -232,43 +215,40 @@ with tab2:
 
     with col2:
         st.markdown("#### Risk Class Distribution")
-        fig_class = px.pie(df, names="Class", title="Class Breakdown", hole=0.3)
+        fig_class = px.pie(df, names="Class", title="Risk Class Distribution", hole=0.3)
         st.plotly_chart(fig_class, use_container_width=True)
-        st.markdown("#### Missing Values")
+
+        st.markdown("#### Missing Data Overview")
         st.dataframe(df.isnull().sum().to_frame("Missing Count"))
 
 # === Tab 3: Model Insights ===
 with tab3:
     st.subheader("📈 Model Performance & Insights")
     st.markdown("#### Feature Correlation Heatmap")
-    fig_corr = px.imshow(df.corr(numeric_only=True), title="Correlations", color_continuous_scale="RdBu")
+    fig_corr = px.imshow(df.corr(numeric_only=True), title="Feature Correlation", color_continuous_scale="RdBu")
     st.plotly_chart(fig_corr, use_container_width=True)
 
-    st.markdown("#### Feature Distribution by Class")
-    selected_feat = st.selectbox("Select Feature:", ["Frequency", "Monetary", "Time"])
-    fig_dist = px.box(df, x="Class", y=selected_feat, color="Class", title=f"{selected_feat} by Risk Class")
-    st.plotly_chart(fig_dist, use_container_width=True)
+    st.markdown("#### Feature Distributions")
+    feat = st.selectbox("Choose a feature:", ["Frequency", "Monetary", "Time"])
+    fig_feat = px.box(df, x="Class", y=feat, color="Class", title=f"{feat} by Risk Class")
+    st.plotly_chart(fig_feat, use_container_width=True)
 
     st.markdown("#### Pairwise Feature Plot")
-    st.image("images/pairplot.png", caption="Pairplot of Patient Data")
+    st.image("images/pairplot.png", caption="Pairwise Feature Analysis")
 
-# === Tab 4: Chat with AI ===
+# === Tab 4: AI Chat Assistant ===
 with tab4:
     st.subheader("🤖 AI Chat Assistant")
-    st.markdown("Ask personalized health questions — Jake AI will help you make better decisions.")
+    st.markdown("Ask personalized health questions and get dynamic responses from Jake AI.")
 
     user_input = st.text_area("💬 Enter your question:")
     if st.button("🚀 Ask AI"):
-        with st.spinner("Jake is generating a response..."):
+        with st.spinner("Jake is thinking..."):
             try:
                 chat_model = genai.GenerativeModel("gemini-1.5-flash-latest")
                 chat = chat_model.start_chat(history=[])
-                health_context = st.session_state.get("health_summary", "")
-                prompt = (
-                    f"{health_context}\n\n"
-                    "Based on the above profile, answer:\n"
-                    f"{user_input}"
-                )
+                context = st.session_state.get("health_summary", "")
+                prompt = f"{context}\n\nPatient's Question: {user_input}"
                 response = chat.send_message(prompt)
                 st.markdown(response.text)
             except Exception as e:
@@ -276,14 +256,14 @@ with tab4:
 
 # === Tab 5: About ===
 with tab5:
-    st.subheader("ℹ️ About")
+    st.subheader("ℹ️ About This App")
     st.markdown("""
-    This is a smart, AI-powered healthcare advisor built with:
-    - 🤖 ML: Logistic Regression Model
-    - 📊 DA: Streamlit + Plotly visualizations
-    - 🧠 AI: Jake conversational agent
-    - 💡 Future-Ready: SHAP, AutoML, Batch Prediction, Treatment Intelligence
+    A cutting-edge healthcare recommendation system combining:
+    - 🧠 Machine Learning (Logistic Regression)
+    - 💬 Jake AI (Gemini)
+    - 📊 Interactive Dashboards
+    - 📄 SHAP Explainability + PDF Export
 
-    **Developer:** Jayanth (Full Stack Developer & AI Enthusiast)  
+    **Developed by:** Jayanth | Full Stack Developer & AI Enthusiast  
     🔗 [GitHub Repository](https://github.com/Jayanth2323/HealthCare)
     """)

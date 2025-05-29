@@ -92,6 +92,40 @@ with tab1:
         probs = model.predict_proba(input_data)[0]
         confidence = f"{probs[prediction]*100:.2f}%"
         recommendation = generate_recommendation(prediction)
+        health_summary = f"""
+        Patient Health Summary:
+        - Risk Level: {['Low', 'Medium', 'High'][prediction]}
+        - Confidence: {confidence}
+        - Recommendation: {recommendation.replace('**', '').replace('✅', '').replace('⚠️', '').replace('🚨', '')}
+        - Visit Frequency: {frequency}
+        - Healthcare Spending: ${monetary}
+        - Time Since Last Visit: {time} months
+        Please use this context to assist with any follow-up health questions.
+        """
+        st.session_state["health_summary"] = health_summary
+        # === Auto-Treatment Analysis using Gemini ===
+        with st.spinner("🔬 Analyzing treatment recommendations with Gemini AI..."):
+            try:
+                gen_model = genai.GenerativeModel(model_name="gemini-1.5-flash-latest")
+                gen_chat = gen_model.start_chat(history=[])
+                
+                auto_prompt = (
+                    f"{health_summary}\n\n"
+                    "🧠 Based on the above metrics, risk level, and health status, provide:\n"
+                    "- A probable cause or health concern associated with the risk level.\n"
+                    "- Treatment recommendations, lifestyle changes, or preventive steps.\n"
+                    "- Suggested specialist consultation (if any).\n"
+                    "- A rationale in simple, professional language.\n"
+                    )
+                
+                auto_response = gen_chat.send_message(auto_prompt)
+                st.markdown("### 🧠 Gemini's Auto Analysis")
+                st.success("✅ AI-driven insights generated:")
+                st.markdown(auto_response.text)
+                
+            except Exception as e:
+                st.error(f"⚠️ Error during Gemini analysis: {str(e)}")
+                
 
         col1, col2 = st.columns([1, 1])
 
@@ -234,17 +268,45 @@ with tab4:
     model_list = ("gemini-1.5-flash-latest")
     # selected_model = st.selectbox(model_list)
     user_input = st.text_area("💬 Enter your health question:")
-
+    
     if st.button("🚀 Ask AI"):
         with st.spinner("Thinking..."):
             try:
                 model = genai.GenerativeModel(model_name=model_list)
                 chat = model.start_chat(history=[])
-                response = chat.send_message(user_input)
+
+                # Combine health context and user input
+                user_query = user_input.strip()
+                # Expanded prompt with clear instruction for treatment guidance
+                health_summary = st.session_state.get("health_summary", "")
+                treatment_prompt = (
+                    f"{health_summary}\n\n"
+                    "🧠 Based on the risk level and patient metrics above, provide the following:\n"
+                    "- A probable cause of the risk.\n"
+                    "- Recommended treatments, lifestyle modifications, or clinical interventions.\n"
+                    "- Any specialist referrals if needed.\n"
+                    "- Brief rationale behind the suggestion.\n\n"
+                    f"Patient's Question: {user_query}"
+                    )
+                
+                response = chat.send_message(treatment_prompt)
                 st.success("✅ Response received:")
                 st.markdown(response.text)
+
             except Exception as e:
                 st.error(f"Error fetching AI response: {str(e)}")
+
+    
+    # if st.button("🚀 Ask AI"):
+    #     with st.spinner("Thinking..."):
+    #         try:
+    #             model = genai.GenerativeModel(model_name=model_list)
+    #             chat = model.start_chat(history=[])
+    #             response = chat.send_message(user_input)
+    #             st.success("✅ Response received:")
+    #             st.markdown(response.text)
+    #         except Exception as e:
+    #             st.error(f"Error fetching AI response: {str(e)}")
 
 # === Tab 5: About ===
 with tab5:
