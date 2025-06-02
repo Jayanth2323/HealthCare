@@ -44,8 +44,9 @@ def generate_pdf_report(health_summary, ai_response, path="./data/health_report.
     pdf.set_font("DejaVu", size=12)
     pdf.multi_cell(0, 10, ai_response)
 
-    pdf.output(path)
-    return path
+    with open(path, "wb") as f:
+        f.write(pdf.output(dest="S").encode("utf-8"))
+        return path
 
 
 # === Risk-to-Recommendation Mapper ===
