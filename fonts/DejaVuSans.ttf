@@ -1,0 +1,4 @@
+import urllib.request
+font_url = "https://github.com/dejavu-fonts/dejavu-fonts/"
+os.makedirs("fonts", exist_ok=True)
+urllib.request.urlretrieve(font_url, "fonts/DejaVuSans.ttf")
