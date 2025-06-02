@@ -18,58 +18,95 @@ def st_shap(plot, height=None):
 class UnicodePDF(FPDF):
     def __init__(self):
         super().__init__()
+        # Ensure fonts directory exists
         font_dir = os.path.join("fonts")
+        os.makedirs(font_dir, exist_ok=True)
+        
+        # Download DejaVu font if not present
         font_path = os.path.join(font_dir, "DejaVuSans.ttf")
         if not os.path.exists(font_path):
-            raise FileNotFoundError("DejaVuSans.ttf not found in fonts/ directory. Please add it.")
+            try:
+                import urllib.request
+                font_url = "https://github.com/dejavu-fonts/dejavu-fonts/releases/download/version_2_37/dejavu-fonts-ttf-2.37.zip"
+                zip_path = os.path.join(font_dir, "dejavu.zip")
+                urllib.request.urlretrieve(font_url, zip_path)
+                
+                import zipfile
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    zip_ref.extract("dejavu-fonts-ttf-2.37/ttf/DejaVuSans.ttf", font_dir)
+                    os.rename(
+                        os.path.join(font_dir, "dejavu-fonts-ttf-2.37", "ttf", "DejaVuSans.ttf"),
+                        font_path
+                    )
+                os.remove(zip_path)
+            except Exception as e:
+                raise FileNotFoundError(f"Could not download DejaVu font: {str(e)}")
+
         self.add_font("DejaVu", "", font_path, uni=True)
         self.set_font("DejaVu", size=12)
 
-# === PDF Report Generator using Unicode-Compatible Font ===
+# === Text Cleaning Function ===
+def clean_text(text):
+    """Replace all emojis and special characters with text equivalents"""
+    emoji_map = {
+        "✅": "[OK]",
+        "⚠️": "[WARNING]",
+        "🚨": "[ALERT]",
+        "🧠": "[BRAIN]",
+        "❌": "[ERROR]",
+        "❓": "[UNKNOWN]",
+        "💡": "[TIP]",
+        "📅": "[CALENDAR]",
+        "💸": "[MONEY]",
+        "⏳": "[TIME]",
+        "💬": "[CHAT]",
+        "🚀": "[ROCKET]",
+        "📄": "[DOCUMENT]",
+        "🔄": "[REFRESH]",
+        "🔍": "[SEARCH]",
+        "📊": "[CHART]",
+        "📈": "[GRAPH]",
+        "ℹ️": "[INFO]"
+    }
+    for emoji, replacement in emoji_map.items():
+        text = text.replace(emoji, replacement)
+    return text
+
+# === PDF Report Generator ===
 def generate_pdf_report(health_summary, ai_response, path="./data/health_report.pdf"):
+    # Ensure output directory exists
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    
     pdf = UnicodePDF()
     pdf.add_page()
 
-    # Clean text by replacing emojis with text equivalents
-    def clean_text(text):
-        emoji_map = {
-            "✅": "[OK]",
-            "⚠️": "[WARNING]",
-            "🚨": "[ALERT]",
-            "🧠": "",
-            "❌": "[ERROR]",
-            "❓": "[UNKNOWN]",
-            "💡": "[TIP]",
-            "📅": "[CALENDAR]",
-            "💸": "[MONEY]",
-            "⏳": "[TIME]"
-        }
-        for emoji, replacement in emoji_map.items():
-            text = text.replace(emoji, replacement)
-        return text
-
+    # Clean input texts
     health_summary = clean_text(health_summary)
     ai_response = clean_text(ai_response)
 
-    pdf.set_font("DejaVu", size=14)
-    pdf.multi_cell(0, 10, "AI Healthcare Summary Report", align="C")
+    # Set document properties
+    pdf.set_title("AI Healthcare Summary Report")
+    pdf.set_author("Healthcare AI System")
 
-    pdf.ln()
+    # Add content
+    pdf.set_font("DejaVu", size=16)
+    pdf.cell(0, 10, "AI Healthcare Summary Report", ln=True, align='C')
+    pdf.ln(10)
+
     pdf.set_font("DejaVu", size=12)
-    pdf.multi_cell(0, 10, health_summary)
+    pdf.multi_cell(0, 8, health_summary)
+    pdf.ln(10)
 
-    pdf.ln()
     pdf.set_font("DejaVu", style='B', size=12)
     pdf.cell(0, 10, "Gemini's Treatment Recommendations:", ln=True)
-
     pdf.set_font("DejaVu", size=12)
-    pdf.multi_cell(0, 10, ai_response)
+    pdf.multi_cell(0, 8, ai_response)
 
-    # Save the PDF with proper encoding handling
+    # Generate and save PDF
     try:
-        pdf_output = pdf.output(dest='S')
+        pdf_output = pdf.output(dest='S').encode('latin1', errors='replace')
         with open(path, "wb") as f:
-            f.write(pdf_output.encode('latin1', errors='replace'))
+            f.write(pdf_output)
         return path
     except Exception as e:
         raise Exception(f"Failed to generate PDF: {str(e)}")
