@@ -21,63 +21,38 @@ class UnicodePDF(FPDF):
         font_dir = os.path.join("fonts")
         font_path = os.path.join(font_dir, "DejaVuSans.ttf")
         if not os.path.exists(font_path):
-            raise FileNotFoundError("❌ DejaVuSans.ttf not found in fonts/ directory. Please add it.")
+            raise FileNotFoundError("DejaVuSans.ttf not found in fonts/ directory. Please add it.")
         self.add_font("DejaVu", "", font_path, uni=True)
         self.set_font("DejaVu", size=12)
 
 # === PDF Report Generator using Unicode-Compatible Font ===
-# def generate_pdf_report(health_summary, ai_response, path="./data/health_report.pdf"):
-#     pdf = UnicodePDF()
-#     pdf.add_page()
-
-#     pdf.set_font("DejaVu", size=14)
-#     pdf.multi_cell(0, 10, "🧠 AI Healthcare Summary Report", align="C")
-
-#     pdf.ln()
-#     pdf.set_font("DejaVu", size=12)
-#     pdf.multi_cell(0, 10, health_summary)
-
-#     pdf.ln()
-#     pdf.set_font("DejaVu", style='B', size=12)
-#     pdf.cell(0, 10, "Gemini's Treatment Recommendations:", ln=True)
-
-#     pdf.set_font("DejaVu", size=12)
-#     pdf.multi_cell(0, 10, ai_response)
-
-#     with open(path, "wb") as f:
-#         f.write(pdf.output(dest="S").encode("utf-8"))
-#         return path
-# def generate_pdf_report(health_summary, ai_response, path="./data/health_report.pdf"):
-#     pdf = UnicodePDF()
-#     pdf.add_page()
-
-#     pdf.set_font("DejaVu", size=14)
-#     pdf.multi_cell(0, 10, "🧠 AI Healthcare Summary Report", align="C")
-
-#     pdf.ln()
-#     pdf.set_font("DejaVu", size=12)
-#     pdf.multi_cell(0, 10, health_summary)
-
-#     pdf.ln()
-#     pdf.set_font("DejaVu", style='B', size=12)
-#     pdf.cell(0, 10, "Gemini's Treatment Recommendations:", ln=True)
-
-#     pdf.set_font("DejaVu", size=12)
-#     pdf.multi_cell(0, 10, ai_response)
-
-#     # THIS is the key fix to avoid Latin-1 UnicodeEncodeError
-#     pdf_data = pdf.output(dest='S').encode('utf-8')
-#     with open(path, 'wb') as f:
-#         f.write(pdf_data)
-
-#     return path
-
 def generate_pdf_report(health_summary, ai_response, path="./data/health_report.pdf"):
     pdf = UnicodePDF()
     pdf.add_page()
 
+    # Clean text by replacing emojis with text equivalents
+    def clean_text(text):
+        emoji_map = {
+            "✅": "[OK]",
+            "⚠️": "[WARNING]",
+            "🚨": "[ALERT]",
+            "🧠": "",
+            "❌": "[ERROR]",
+            "❓": "[UNKNOWN]",
+            "💡": "[TIP]",
+            "📅": "[CALENDAR]",
+            "💸": "[MONEY]",
+            "⏳": "[TIME]"
+        }
+        for emoji, replacement in emoji_map.items():
+            text = text.replace(emoji, replacement)
+        return text
+
+    health_summary = clean_text(health_summary)
+    ai_response = clean_text(ai_response)
+
     pdf.set_font("DejaVu", size=14)
-    pdf.multi_cell(0, 10, "🧠 AI Healthcare Summary Report", align="C")
+    pdf.multi_cell(0, 10, "AI Healthcare Summary Report", align="C")
 
     pdf.ln()
     pdf.set_font("DejaVu", size=12)
@@ -90,19 +65,20 @@ def generate_pdf_report(health_summary, ai_response, path="./data/health_report.
     pdf.set_font("DejaVu", size=12)
     pdf.multi_cell(0, 10, ai_response)
 
-    # Write as binary (UTF-8-safe) to avoid latin-1 issues
-    pdf_bytes = pdf.output(dest='S').encode('latin1')  # required by FPDF's internal structure
-    with open(path, 'wb') as f:
-        f.write(pdf_bytes)
-
-    return path
+    # Save the PDF with proper encoding handling
+    try:
+        pdf_output = pdf.output(dest='S')
+        with open(path, "wb") as f:
+            f.write(pdf_output.encode('latin1', errors='replace'))
+        return path
+    except Exception as e:
+        raise Exception(f"Failed to generate PDF: {str(e)}")
 
 # === Risk-to-Recommendation Mapper ===
 def generate_recommendation(pred_label):
-    return {
-        0: "✅ Low Risk\nMaintain a healthy lifestyle. Annual check-ups recommended.",
-        1: "⚠️ Medium Risk\nIncrease physical activity and consult your doctor.",
-        2: "🚨 High Risk\nImmediate medical attention advised.",
-    }.get(pred_label, "❓ No recommendation available.")
-    
-generate_pdf_report("✅ All good!", "✅ Follow your doctor’s advice.")
+    recommendation_map = {
+        0: "[OK] Low Risk\nMaintain a healthy lifestyle. Annual check-ups recommended.",
+        1: "[WARNING] Medium Risk\nIncrease physical activity and consult your doctor.",
+        2: "[ALERT] High Risk\nImmediate medical attention advised.",
+    }
+    return recommendation_map.get(pred_label, "[UNKNOWN] No recommendation available.")
