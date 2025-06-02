@@ -15,12 +15,15 @@ from fpdf import FPDF
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 if not api_key:
-    st.error("❌ Gemini API key not found. Please set GOOGLE_API_KEY in your .env file.")
+    st.error(
+        "❌ Gemini API key not found. Please set GOOGLE_API_KEY in your .env file."
+    )
     st.stop()
 genai.configure(api_key=api_key)
 
 # === Streamlit Setup ===
 st.set_page_config(page_title="AI Healthcare Advisor", layout="wide", page_icon="🧠")
+
 
 # === Load Model & Data ===
 @st.cache_resource
@@ -31,6 +34,7 @@ def load_model():
         st.error("❌ Model not found at 'models/logistic_regression_pipeline.pkl'.")
         return None
 
+
 @st.cache_data
 def load_data():
     try:
@@ -38,6 +42,7 @@ def load_data():
     except FileNotFoundError:
         st.error("❌ Data file missing at 'data/cleaned_blood_data.csv'.")
         return pd.DataFrame()
+
 
 model = load_model()
 df = load_data()
@@ -59,6 +64,7 @@ def generate_recommendation(pred_label):
         2: "🚨 **High Risk**\nImmediate medical attention advised. Begin treatment under supervision.",
     }.get(pred_label, "❓ No recommendation available.")
 
+
 # === Sidebar ===
 st.sidebar.header("📝 Patient Profile")
 frequency = st.sidebar.slider("📅 Visit Frequency (visits/year)", 0, 50, 5)
@@ -70,13 +76,15 @@ st.title("🧠 AI-Driven Personalized Healthcare Advisor")
 st.markdown("Empowering health decisions through machine intelligence.")
 
 # === Tabs ===
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🧬 Recommendation Engine",
-    "📊 Data Intelligence",
-    "🔍 Model Insights",
-    "🤖 AI Chat Assistant",
-    "ℹ️ About"
-])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(
+    [
+        "🧬 Recommendation Engine",
+        "📊 Data Intelligence",
+        "🔍 Model Insights",
+        "🤖 AI Chat Assistant",
+        "ℹ️ About",
+    ]
+)
 
 # === Tab 1: Recommendation Engine ===
 with tab1:
@@ -89,10 +97,15 @@ with tab1:
         uploaded_df = pd.read_csv(uploaded_file)
         uploaded_df["Prediction"] = model.predict(uploaded_df)
         st.dataframe(uploaded_df)
-        st.download_button("📥 Download Predictions", uploaded_df.to_csv(index=False), "batch_predictions.csv")
+        st.download_button(
+            "📥 Download Predictions",
+            uploaded_df.to_csv(index=False),
+            "batch_predictions.csv",
+        )
 
     # === Individual Recommendation
     if st.sidebar.button("💡 Generate Recommendation"):
+
         def generate_pdf_report(health_summary, ai_response):
             pdf = FPDF()
             pdf.add_page()
@@ -101,7 +114,7 @@ with tab1:
             pdf.ln()
             pdf.multi_cell(0, 10, health_summary)
             pdf.ln()
-            pdf.set_font("Arial", 'B', size=12)
+            pdf.set_font("Arial", "B", size=12)
             pdf.cell(0, 10, "Gemini's Treatment Recommendations:", ln=True)
             pdf.set_font("Arial", size=12)
             pdf.multi_cell(0, 10, ai_response)
@@ -109,7 +122,9 @@ with tab1:
             pdf.output(pdf_output)
             return pdf_output
 
-        input_df = pd.DataFrame({"Frequency": [frequency], "Monetary": [monetary], "Time": [time]})
+        input_df = pd.DataFrame(
+            {"Frequency": [frequency], "Monetary": [monetary], "Time": [time]}
+        )
         prediction = model.predict(input_df)[0]
         probs = model.predict_proba(input_df)[0]
         confidence = f"{probs[prediction]*100:.2f}%"
@@ -147,9 +162,15 @@ with tab1:
                 pdf_file = generate_pdf_report(health_summary, ai_response.text)
                 with open(pdf_file, "rb") as f:
                     st.download_button(
-                        "📄 Download Full PDF Report", f, file_name=pdf_file, mime="application/pdf")
+                        "📄 Download Full PDF Report",
+                        f,
+                        file_name=pdf_file,
+                        mime="application/pdf",
+                    )
 
-                st.download_button("📥 Download Treatment Plan", ai_response.text, "treatment_plan.txt")
+                st.download_button(
+                    "📥 Download Treatment Plan", ai_response.text, "treatment_plan.txt"
+                )
             except Exception as e:
                 st.error(f"Jake AI Error: {e}")
 
@@ -166,7 +187,11 @@ with tab1:
             st.markdown("#### 🧠 Model Explainability (SHAP)")
             with st.expander("Show SHAP values"):
                 try:
-                    classifier_step = next(step for step in model.named_steps if hasattr(model.named_steps[step], "coef_"))
+                    classifier_step = next(
+                        step
+                        for step in model.named_steps
+                        if hasattr(model.named_steps[step], "coef_")
+                    )
                     classifier = model.named_steps[classifier_step]
                     importance = classifier.coef_[0]
                 except Exception:
@@ -186,7 +211,7 @@ with tab1:
                 x=["Frequency", "Monetary", "Time"],
                 y=importance,
                 labels={"x": "Features", "y": "Importance"},
-                title="Feature Contribution to Risk"
+                title="Feature Contribution to Risk",
             )
             st.plotly_chart(fig_imp, use_container_width=True)
 
@@ -202,19 +227,32 @@ with tab1:
             - Monetary: ${monetary}
             - Time Since Last Visit: {time} months
             """
-            st.download_button("📥 Download Health Report", full_report, "health_report.txt")
+            st.download_button(
+                "📥 Download Health Report", full_report, "health_report.txt"
+            )
 
         with col2:
             st.markdown("#### 📊 Your Health Snapshot")
-            patient_df = pd.DataFrame({
-                "Metric": ["Visit Frequency", "Spending", "Time Since Last Visit"],
-                "Value": [frequency, monetary, time]
-            })
+            patient_df = pd.DataFrame(
+                {
+                    "Metric": ["Visit Frequency", "Spending", "Time Since Last Visit"],
+                    "Value": [frequency, monetary, time],
+                }
+            )
             avg = [df["Frequency"].mean(), df["Monetary"].mean(), df["Time"].mean()]
 
             fig_patient = go.Figure()
-            fig_patient.add_trace(go.Bar(x=patient_df["Metric"], y=patient_df["Value"], name="You"))
-            fig_patient.add_trace(go.Scatter(x=patient_df["Metric"], y=avg, mode="lines+markers", name="Population Avg"))
+            fig_patient.add_trace(
+                go.Bar(x=patient_df["Metric"], y=patient_df["Value"], name="You")
+            )
+            fig_patient.add_trace(
+                go.Scatter(
+                    x=patient_df["Metric"],
+                    y=avg,
+                    mode="lines+markers",
+                    name="Population Avg",
+                )
+            )
             fig_patient.update_layout(title="Your Metrics vs Population Average")
             st.plotly_chart(fig_patient, use_container_width=True)
     else:
@@ -241,12 +279,20 @@ with tab2:
 with tab3:
     st.subheader("📈 Model Performance & Insights")
     st.markdown("#### Feature Correlation Heatmap")
-    fig_corr = px.imshow(df.corr(numeric_only=True), title="Correlations", color_continuous_scale="RdBu")
+    fig_corr = px.imshow(
+        df.corr(numeric_only=True), title="Correlations", color_continuous_scale="RdBu"
+    )
     st.plotly_chart(fig_corr, use_container_width=True)
 
     st.markdown("#### Feature Distribution by Class")
     selected_feat = st.selectbox("Select Feature:", ["Frequency", "Monetary", "Time"])
-    fig_dist = px.box(df, x="Class", y=selected_feat, color="Class", title=f"{selected_feat} by Risk Class")
+    fig_dist = px.box(
+        df,
+        x="Class",
+        y=selected_feat,
+        color="Class",
+        title=f"{selected_feat} by Risk Class",
+    )
     st.plotly_chart(fig_dist, use_container_width=True)
 
     st.markdown("#### Pairwise Feature Plot")
@@ -255,7 +301,9 @@ with tab3:
 # === Tab 4: Chat with AI ===
 with tab4:
     st.subheader("🤖 AI Chat Assistant")
-    st.markdown("Ask personalized health questions — Jake AI will help you make better decisions.")
+    st.markdown(
+        "Ask personalized health questions — Jake AI will help you make better decisions."
+    )
 
     user_input = st.text_area("💬 Enter your question:")
     if st.button("🚀 Ask AI"):
@@ -277,7 +325,8 @@ with tab4:
 # === Tab 5: About ===
 with tab5:
     st.subheader("ℹ️ About")
-    st.markdown("""
+    st.markdown(
+        """
     This is a smart, AI-powered healthcare advisor built with:
     - 🤖 ML: Logistic Regression Model
     - 📊 DA: Streamlit + Plotly visualizations
@@ -286,4 +335,5 @@ with tab5:
 
     **Developer:** Jayanth (Full Stack Developer & AI Enthusiast)  
     🔗 [GitHub Repository](https://github.com/Jayanth2323/HealthCare)
-    """)
+    """
+    )

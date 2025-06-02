@@ -108,7 +108,7 @@ with tab1:
             try:
                 gen_model = genai.GenerativeModel(model_name="gemini-1.5-flash-latest")
                 gen_chat = gen_model.start_chat(history=[])
-                
+
                 auto_prompt = (
                     f"{health_summary}\n\n"
                     "🧠 Based on the above metrics, risk level, and health status, provide:\n"
@@ -116,16 +116,15 @@ with tab1:
                     "- Treatment recommendations, lifestyle changes, or preventive steps.\n"
                     "- Suggested specialist consultation (if any).\n"
                     "- A rationale in simple, professional language.\n"
-                    )
-                
+                )
+
                 auto_response = gen_chat.send_message(auto_prompt)
                 st.markdown("### 🧠 Gemini's Auto Analysis")
                 st.success("✅ AI-driven insights generated:")
                 st.markdown(auto_response.text)
-                
+
             except Exception as e:
                 st.error(f"⚠️ Error during Gemini analysis: {str(e)}")
-                
 
         col1, col2 = st.columns([1, 1])
 
@@ -265,10 +264,10 @@ with tab4:
         "🧠 Ask your health-related queries and get answers powered by Gemini AI."
     )
 
-    model_list = ("gemini-1.5-flash-latest")
+    model_list = "gemini-1.5-flash-latest"
     # selected_model = st.selectbox(model_list)
     user_input = st.text_area("💬 Enter your health question:")
-    
+
     if st.button("🚀 Ask AI"):
         with st.spinner("Thinking..."):
             try:
@@ -287,8 +286,8 @@ with tab4:
                     "- Any specialist referrals if needed.\n"
                     "- Brief rationale behind the suggestion.\n\n"
                     f"Patient's Question: {user_query}"
-                    )
-                
+                )
+
                 response = chat.send_message(treatment_prompt)
                 st.success("✅ Response received:")
                 st.markdown(response.text)
@@ -296,7 +295,6 @@ with tab4:
             except Exception as e:
                 st.error(f"Error fetching AI response: {str(e)}")
 
-    
     # if st.button("🚀 Ask AI"):
     #     with st.spinner("Thinking..."):
     #         try:
