@@ -1,10 +1,13 @@
 import os
 import streamlit as st
+import sys
 from dotenv import load_dotenv
 from modules.loaders import load_model, load_data
 from modules.ui_tabs import render_tabs
 from modules.utils import configure_genai
 
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # === Load API Key ===
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
