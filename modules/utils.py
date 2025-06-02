@@ -26,6 +26,27 @@ class UnicodePDF(FPDF):
         self.set_font("DejaVu", size=12)
 
 # === PDF Report Generator using Unicode-Compatible Font ===
+# def generate_pdf_report(health_summary, ai_response, path="./data/health_report.pdf"):
+#     pdf = UnicodePDF()
+#     pdf.add_page()
+
+#     pdf.set_font("DejaVu", size=14)
+#     pdf.multi_cell(0, 10, "🧠 AI Healthcare Summary Report", align="C")
+
+#     pdf.ln()
+#     pdf.set_font("DejaVu", size=12)
+#     pdf.multi_cell(0, 10, health_summary)
+
+#     pdf.ln()
+#     pdf.set_font("DejaVu", style='B', size=12)
+#     pdf.cell(0, 10, "Gemini's Treatment Recommendations:", ln=True)
+
+#     pdf.set_font("DejaVu", size=12)
+#     pdf.multi_cell(0, 10, ai_response)
+
+#     with open(path, "wb") as f:
+#         f.write(pdf.output(dest="S").encode("utf-8"))
+#         return path
 def generate_pdf_report(health_summary, ai_response, path="./data/health_report.pdf"):
     pdf = UnicodePDF()
     pdf.add_page()
@@ -44,9 +65,12 @@ def generate_pdf_report(health_summary, ai_response, path="./data/health_report.
     pdf.set_font("DejaVu", size=12)
     pdf.multi_cell(0, 10, ai_response)
 
-    with open(path, "wb") as f:
-        f.write(pdf.output(dest="S").encode("utf-8"))
-        return path
+    # THIS is the key fix to avoid Latin-1 UnicodeEncodeError
+    pdf_data = pdf.output(dest='S').encode('utf-8')
+    with open(path, 'wb') as f:
+        f.write(pdf_data)
+
+    return path
 
 
 # === Risk-to-Recommendation Mapper ===
@@ -56,3 +80,5 @@ def generate_recommendation(pred_label):
         1: "⚠️ Medium Risk\nIncrease physical activity and consult your doctor.",
         2: "🚨 High Risk\nImmediate medical attention advised.",
     }.get(pred_label, "❓ No recommendation available.")
+    
+generate_pdf_report("✅ All good!", "✅ Follow your doctor’s advice.")
