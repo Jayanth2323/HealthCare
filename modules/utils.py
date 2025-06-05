@@ -49,24 +49,23 @@ class UnicodePDF(FPDF):
 def clean_text(text):
     """Replace all emojis and special characters with text equivalents"""
     emoji_map = {
-        "✅": "[OK]",
-        "⚠️": "[WARNING]",
-        "🚨": "[ALERT]",
-        "🧠": "[BRAIN]",
-        "❌": "[ERROR]",
-        "❓": "[UNKNOWN]",
-        "💡": "[TIP]",
-        "📅": "[CALENDAR]",
-        "💸": "[MONEY]",
-        "⏳": "[TIME]",
-        "💬": "[CHAT]",
-        "🚀": "[ROCKET]",
-        "📄": "[DOCUMENT]",
-        "🔄": "[REFRESH]",
-        "🔍": "[SEARCH]",
-        "📊": "[CHART]",
-        "📈": "[GRAPH]",
-        "ℹ️": "[INFO]"
+        "✅": "[OK]","⚠️": "[WARNING]",
+        "🚨": "[ALERT]","🧠": "[BRAIN]",
+        "❌": "[ERROR]","❓": "[UNKNOWN]",
+        "💡": "[TIP]","📅": "[CALENDAR]",
+        "💸": "[MONEY]","⏳": "[TIME]",
+        "💬": "[CHAT]","🚀": "[ROCKET]",
+        "📄": "[DOCUMENT]","🔄": "[REFRESH]",
+        "🔍": "[SEARCH]","📊": "[CHART]",
+        "📈": "[GRAPH]","ℹ️": "[INFO]",
+        "📝": "[WORD]","📑": "[NOTE]",
+        "🧬": "[DNA]","🤖": "[ROBOT]",
+        "📥": "[DOWNLOAD]","🔬": "[SCIENCE]",
+        "📂": "[FOLDER]","👥": "[GENDER]",
+        "🎂": "[BIRTHDAY]","🩸": "[BLOOD]",
+        "💓": "[HEART]","🧪": "[CHEMISTRY]",
+        "🩺": "[HEALTH]","🚬": "[SMOKING]",
+        "🏃": "[RUNNING]","👈": "[LEFT]","👉": "[RIGHT]",        
     }
     for emoji, replacement in emoji_map.items():
         text = text.replace(emoji, replacement)

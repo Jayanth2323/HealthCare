@@ -16,17 +16,18 @@ from dotenv import load_dotenv
 from fpdf import FPDF
 
 # === Font Bootstrap Helpers ===
-FONT_DIR = "fonts"
+FONT_DIR  = "fonts"
 FONT_NAME = "DejaVuSans.ttf"
 FONT_PATH = os.path.join(FONT_DIR, FONT_NAME)
-RAW_URL = (
-    "https://github.com/dejavu-fonts/dejavu-fonts/"
-    "raw/main/ttf/DejaVuSans.ttf"
-)
+
+# CORRECTED RAW_URL: use raw.githubusercontent.com instead of github.com/raw
+# Updated RAW_URL as the previous one was returning 404
+RAW_URL = "https://github.com/dejavu-fonts/dejavu-fonts/raw/main/ttf/DejaVuSans.ttf"
 
 def _is_valid_ttf(path: str) -> bool:
     """
-    Quick sanity-check: TrueType files begin with 0x00010000 (uint32) or b'true'.
+    Quick sanity-check: TrueType files typically begin with 0x00010000 (uint32) or b'true'.
+    Returns True if the file exists and starts with a valid TTF header.
     """
     if not os.path.isfile(path):
         return False
@@ -36,20 +37,25 @@ def _is_valid_ttf(path: str) -> bool:
 
 def bootstrap_font() -> str:
     """
-    Ensures that a valid DejaVuSans.ttf exists in the FONT_DIR.
-    Downloads it if missing or invalid, and returns the font path.
-    Raises RuntimeError on failure.
+    Ensure that FONT_PATH points to a valid DejaVuSans.ttf.
+    If missing or invalid, download from RAW_URL.
+    Raises RuntimeError if download/validation fails.
+    Returns the path to a valid TTF file.
     """
     os.makedirs(FONT_DIR, exist_ok=True)
+
+    # If the file doesn’t exist or fails the header check, attempt to download
     if not _is_valid_ttf(FONT_PATH):
         try:
             logging.info("Downloading DejaVuSans.ttf …")
             urllib.request.urlretrieve(RAW_URL, FONT_PATH)
-        except Exception as exc:
-            raise RuntimeError(f"Font download failed → {exc}") from exc
+        except Exception as download_exc:
+            raise RuntimeError(f"Font download failed → {download_exc}") from download_exc
 
+        # Re-check after download
         if not _is_valid_ttf(FONT_PATH):
             raise RuntimeError("Downloaded file is not a valid TrueType font.")
+
     return FONT_PATH
 
 # === Generate PDF Report ===
