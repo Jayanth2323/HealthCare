@@ -22,7 +22,9 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 # === Streamlit Setup ===
-st.set_page_config(page_title="JakeAI Healthcare Advisor", layout="wide", page_icon="🧠")
+st.set_page_config(
+    page_title="JakeAI Healthcare Advisor", layout="wide", page_icon="🧠"
+)
 
 # === Currency Formatter ===
 def format_currency(amount, symbol):
@@ -154,7 +156,7 @@ monetary = st.sidebar.slider(
     min_value=currency_range["min"],
     max_value=currency_range["max"],
     value=(currency_range["min"] + currency_range["max"]) // 2,
-    step=currency_range["step"]
+    step=currency_range["step"],
 )
 
 time = st.sidebar.slider("⏳ Time Since Last Visit (months)", 0, 60, 12)
@@ -180,7 +182,9 @@ with tab1:
     st.subheader("Your Personalized Health Recommendation")
 
     # Upload patient dataset for batch prediction
-    uploaded_file = st.file_uploader("📁 Upload a file for processing (any type):", type=None)
+    uploaded_file = st.file_uploader(
+        "📁 Upload a file for processing (any type):", type=None
+    )
 
     if uploaded_file:
         file_ext = os.path.splitext(uploaded_file.name)[-1].lower()
@@ -194,7 +198,7 @@ with tab1:
                 "📥 Download Predictions",
                 batch_data.to_csv(index=False),
                 "batch_predictions.csv",
-                mime="text/csv"
+                mime="text/csv",
             )
 
         elif file_ext in [".txt", ".md"]:
@@ -203,40 +207,52 @@ with tab1:
 
         elif file_ext == ".pdf":
             from PyPDF2 import PdfReader
+
             reader = PdfReader(uploaded_file)
             text = "".join([page.extract_text() for page in reader.pages])
             st.text_area("📑 Extracted PDF Text", text or "No text found.", height=300)
 
         elif file_ext in [".docx"]:
             from docx import Document
+
             doc = Document(uploaded_file)
             doc_text = "\n".join([para.text for para in doc.paragraphs])
             st.text_area("📝 Word Document Content", doc_text, height=300)
 
         else:
-            st.warning(f"⚠️ File type '{file_ext}' not supported for processing. Please upload a supported format.")
-
+            st.warning(
+                f"⚠️ File type '{file_ext}' not supported for processing. "
+                "Please upload a supported format."
+            )
 
     # Individual Recommendation
     if st.sidebar.button("💡 Generate Recommendation"):
         input_df = pd.DataFrame(
-            {"Frequency": [frequency], "Monetary": [monetary], "Time": [time]}
+            {
+                "Frequency": [frequency],
+                "Monetary": [monetary],
+                "Time": [time],
+            }
         )
         prediction = model.predict(input_df)[0]
         probs = model.predict_proba(input_df)[0]
-        confidence = f"{probs[prediction]*100:.2f}%"
+        confidence = f"{probs[prediction] * 100:.2f}%"
         recommendation = generate_recommendation(prediction)
 
-        # Build health summary
+        # Build health summary (ensure numeric values are cast as str)
         health_summary = f"""
-            Patient Health Summary:
-            - Risk Level: {['Low', 'Medium', 'High'][prediction]}
-            - Confidence: {confidence}
-            - Recommendation: {(str(recommendation)).replace('**', '').replace('✅', '').replace('⚠️', '').replace('🚨', '')}
-            - Visit Frequency: {frequency}
-            - Healthcare Spending: {format_currency(monetary, currency_symbol)}
-            - Time Since Last Visit: {time} months
-            """
+        Patient Health Summary:
+        - Risk Level: {['Low', 'Medium', 'High'][prediction]}
+        - Confidence: {confidence}
+        - Recommendation: {(str(recommendation))
+        .replace('**', '')
+        .replace('✅', '')
+        .replace('⚠️', '')
+        .replace('🚨', '')}
+        - Visit Frequency: {str(frequency)}
+        - Healthcare Spending: {format_currency(monetary, currency_symbol)}
+        - Time Since Last Visit: {str(time)} months
+        """
         st.session_state["health_summary"] = health_summary
 
         # Gemini AI Treatment Suggestion
@@ -255,7 +271,7 @@ with tab1:
                 ai_response = chat.send_message(prompt)
                 st.markdown("### 🧠 Jake's Auto Analysis")
                 st.success("✅ Jake's AI-driven treatment suggestions:")
-                
+
                 try:
                     st.markdown(ai_response.text)
                 except Exception:
@@ -275,7 +291,7 @@ with tab1:
                     "📥 Download Treatment Plan",
                     ai_response.text,
                     "treatment_plan.txt",
-                    mime="text/plain"
+                    mime="text/plain",
                 )
             except Exception as e:
                 st.error(f"Jake AI Error: {e}")
@@ -323,11 +339,19 @@ with tab1:
             st.markdown("#### 📊 Your Health Snapshot")
             patient_df = pd.DataFrame(
                 {
-                    "Metric": ["Visit Frequency", f"Spending ({currency_symbol})", "Time Since Last Visit"],
+                    "Metric": [
+                        "Visit Frequency",
+                        f"Spending ({currency_symbol})",
+                        "Time Since Last Visit",
+                    ],
                     "Value": [frequency, monetary, time],
                 }
             )
-            avg = [df["Frequency"].mean(), df["Monetary"].mean(), df["Time"].mean()]
+            avg = [
+                df["Frequency"].mean(),
+                df["Monetary"].mean(),
+                df["Time"].mean(),
+            ]
 
             fig_patient = go.Figure()
             fig_patient.add_trace(
@@ -375,7 +399,9 @@ with tab2:
 
     with col2:
         st.markdown("#### Risk Class Distribution")
-        fig_class = px.pie(df, names="Class", title="Risk Class Distribution", hole=0.3)
+        fig_class = px.pie(
+            df, names="Class", title="Risk Class Distribution", hole=0.3
+        )
         st.plotly_chart(fig_class, use_container_width=True)
 
         st.markdown("#### Missing Data Overview")
@@ -401,7 +427,6 @@ with tab3:
 
     st.markdown("#### Pairwise Feature Plot")
     st.image("images/pairplot.png", caption="Pairwise Feature Analysis")
-    from sklearn.metrics import classification_report, confusion_matrix
     
     st.markdown("#### Model Evaluation Report")
     y_true = df["Class"]
@@ -415,8 +440,9 @@ with tab3:
     fig_conf = px.imshow(
         conf_matrix,
         text_auto=True,
-        title="Confusion Matrix", labels=dict(x="Predicted", y="Actual")
-        )
+        title="Confusion Matrix",
+        labels=dict(x="Predicted", y="Actual"),
+    )
     st.plotly_chart(fig_conf, use_container_width=True)
 
 # === Tab 4: AI Chat Assistant ===
