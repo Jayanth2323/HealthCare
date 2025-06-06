@@ -2,7 +2,6 @@ import os
 import uuid
 import urllib.request
 import logging
-
 import streamlit as st
 import pandas as pd
 import joblib
@@ -10,6 +9,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 import google.generativeai as genai
 import shap
+import seaborn as sns
+import matplotlib.pyplot as plt
 import streamlit.components.v1 as components
 from sklearn.metrics import classification_report, confusion_matrix
 from dotenv import load_dotenv
@@ -180,6 +181,21 @@ def generate_recommendation(pred_label: int) -> str:
         1: "⚠️ **Medium Risk**\nIncrease physical activity, monitor diet. Schedule a medical consultation.",
         2: "🚨 **High Risk**\nImmediate medical attention advised. Begin treatment under supervision.",
     }.get(pred_label, "❓ No recommendation available.")
+
+# === Inserted: Gender vs Diabetes Count ===
+st.markdown("#### 🧍 Gender-wise Diabetes Distribution")
+fig_gen, ax = plt.subplots(figsize=(8, 5))
+sns.countplot(data=df, x="gender", hue="diabetes", ax=ax)
+ax.set_title("Diabetes Distribution by Gender")
+st.pyplot(fig_gen)
+
+# === Inserted: Correlation Heatmap ===
+st.markdown("#### 🔥 Feature Correlation Heatmap")
+fig_corr, ax = plt.subplots(figsize=(14, 8))
+corr = df.corr(numeric_only=True)
+sns.heatmap(corr, annot=True, fmt=".2f", cmap="rocket_r", linewidths=0.5, ax=ax)
+ax.set_title("Correlation Matrix of Key Health Features")
+st.pyplot(fig_corr)
 
 # === Sidebar Inputs ===
 st.sidebar.header("📝 Patient Profile")
