@@ -2,6 +2,7 @@ import os
 import uuid
 import urllib.request
 import logging
+import numpy as np
 import streamlit as st
 import pandas as pd
 import joblib
@@ -12,7 +13,10 @@ import shap
 import seaborn as sns
 import matplotlib.pyplot as plt
 import streamlit.components.v1 as components
+from io import BytesIO
 from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 from dotenv import load_dotenv
 from fpdf import FPDF
 
@@ -181,21 +185,6 @@ def generate_recommendation(pred_label: int) -> str:
         1: "⚠️ **Medium Risk**\nIncrease physical activity, monitor diet. Schedule a medical consultation.",
         2: "🚨 **High Risk**\nImmediate medical attention advised. Begin treatment under supervision.",
     }.get(pred_label, "❓ No recommendation available.")
-
-# === Inserted: Gender vs Diabetes Count ===
-st.markdown("#### 🧍 Gender-wise Diabetes Distribution")
-fig_gen, ax = plt.subplots(figsize=(8, 5))
-sns.countplot(data=df, x="gender", hue="diabetes", ax=ax)
-ax.set_title("Diabetes Distribution by Gender")
-st.pyplot(fig_gen)
-
-# === Inserted: Correlation Heatmap ===
-st.markdown("#### 🔥 Feature Correlation Heatmap")
-fig_corr, ax = plt.subplots(figsize=(14, 8))
-corr = df.corr(numeric_only=True)
-sns.heatmap(corr, annot=True, fmt=".2f", cmap="rocket_r", linewidths=0.5, ax=ax)
-ax.set_title("Correlation Matrix of Key Health Features")
-st.pyplot(fig_corr)
 
 # === Sidebar Inputs ===
 st.sidebar.header("📝 Patient Profile")
@@ -513,13 +502,78 @@ with tab2:
 # === Tab 3: Model Insights ===
 with tab3:
     st.subheader("📈 Model Performance & Insights")
-    st.markdown("#### Feature Correlation Heatmap")
-    fig_corr = px.imshow(
-        df.corr(numeric_only=True),
-        title="Feature Correlation",
-        color_continuous_scale="RdBu",
+    st.markdown("#### 🔥 Feature Correlation Heatmap")
+
+    fig_corr, ax = plt.subplots(figsize=(14, 10))
+
+    # Compute correlation matrix
+    corr = df.corr(numeric_only=True)
+
+    # Mask the upper triangle for a cleaner lower-triangle heatmap (matches your image)
+    mask = np.triu(np.ones_like(corr, dtype=bool))
+
+    # Create the heatmap with better aesthetics
+    sns.heatmap(
+        corr,
+        mask=mask,
+        annot=True,
+        fmt=".3f",
+        cmap="rocket_r",
+        linewidths=0.5,
+        cbar_kws={"shrink": 0.9},
+        ax=ax
     )
-    st.plotly_chart(fig_corr, use_container_width=True)
+
+    ax.set_title("Correlation Matrix of Health Features", fontsize=16)
+    st.pyplot(fig_corr)
+
+    # Optional: Export heatmap as PNG
+    from io import BytesIO
+    buf = BytesIO()
+    fig_corr.savefig(buf, format="png")
+    st.download_button(
+        label="📥 Download Heatmap as PNG",
+        data=buf.getvalue(),
+        file_name="correlation_heatmap.png",
+        mime="image/png"
+    )
+
+    # BMI vs Age by Diabetes Class
+    st.markdown("#### 📉 BMI vs Age by Diabetes Class")
+    if "bmi" in df.columns and "age" in df.columns and "diabetes" in df.columns:
+        fig_bmi_age = px.scatter(
+            df,
+            x="age",
+            y="bmi",
+            color="diabetes",
+            labels={"diabetes": "Diabetes Class"},
+            title="BMI vs Age Colored by Diabetes Risk",
+        )
+        st.plotly_chart(fig_bmi_age, use_container_width=True)
+    else:
+        st.info("⚠️ Could not plot BMI vs Age: missing 'bmi', 'age' or 'diabetes' column.")
+
+    # PCA Visualization
+    st.markdown("#### 🧬 PCA: Patient Clusters")
+    numeric_df = df.select_dtypes(include="number").dropna()
+    scaler = StandardScaler()
+    scaled = scaler.fit_transform(numeric_df)
+    pca = PCA(n_components=2)
+    reduced = pca.fit_transform(scaled)
+    reduced_df = pd.DataFrame(reduced, columns=["PC1", "PC2"])
+
+    if "diabetes" in df.columns:
+        reduced_df["diabetes"] = df.loc[numeric_df.index, "diabetes"].values
+        fig_pca = px.scatter(
+            reduced_df,
+            x="PC1",
+            y="PC2",
+            color="diabetes",
+            title="PCA Projection of Patient Features"
+        )
+        st.plotly_chart(fig_pca, use_container_width=True)
+    else:
+        st.info("⚠️ Cannot show PCA plot because the 'diabetes' column is missing.")
 
     st.markdown("#### Feature Distributions")
     feat = st.selectbox("Choose a feature:", ["Frequency", "Monetary", "Time"])
