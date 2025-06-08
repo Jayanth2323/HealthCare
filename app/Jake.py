@@ -108,6 +108,9 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
 
     # Persist PDF with a unique filename
     os.makedirs("data", exist_ok=True)
+    filename = os.path.join("data", f"health_report_{uuid.uuid4().hex}.pdf")
+    pdf.output(filename)
+    return filename
     unique_id = str(uuid.uuid4())
     output_path = os.path.join("data", f"health_report_{unique_id}.pdf")
     try:
@@ -152,7 +155,7 @@ def format_currency(amount, symbol):
 # === Load Model & Data ===
 @st.cache_resource
 def load_model():
-    model_path = "models/logistic_regression_pipeline.pkl"
+    model_path = os.path.join("models", "logistic_regression_pipeline.pkl")  # "models/logistic_regression_pipeline.pkl"
     if not os.path.isfile(model_path):
         st.error(f"❌ Model not found at '{model_path}'.")
         return None
@@ -160,11 +163,29 @@ def load_model():
 
 @st.cache_data
 def load_data():
+    import os
+    import pandas as pd
+
+    # 1) Load the “real” dataset
     data_path = "data/cleaned_blood_data.csv"
     if not os.path.isfile(data_path):
-        st.error(f"❌ Data file missing at '{data_path}'.")
+        st.error(f"❌ Base data missing at '{data_path}'.")
         return pd.DataFrame()
-    return pd.read_csv(data_path)
+    base_df = pd.read_csv(data_path)
+
+    # 2) Try to load & append the synthetic CSV
+    synthetic_path = "data/synthetic_patient_dataset.csv"
+    if os.path.isfile(synthetic_path):
+        synthetic_df = pd.read_csv(synthetic_path)
+        # only keep columns that both frames share
+        common_cols = [c for c in synthetic_df.columns if c in base_df.columns]
+        synthetic_df = synthetic_df[common_cols]
+        combined = pd.concat([base_df, synthetic_df], ignore_index=True)
+        st.success(f"✅ Loaded and appended {len(synthetic_df)} synthetic records.")
+        return combined
+    else:
+        st.warning(f"⚠️ Could not find '{synthetic_path}'. Using base data only.")
+        return base_df
 
 model = load_model()
 df = load_data()
@@ -172,6 +193,7 @@ df = load_data()
 if model is None or df.empty:
     st.warning("⚠️ Missing essential resources (model/data). Please verify setup.")
     st.stop()
+
 
 # === SHAP Visualization Helper ===
 def st_shap(plot, height=None):
@@ -499,27 +521,57 @@ with tab2:
         st.markdown("#### Missing Data Overview")
         st.dataframe(df.isnull().sum().to_frame("Missing Count"))
 
-# === Tab 3: Model Insights ===
 with tab3:
     st.subheader("📈 Model Performance & Insights")
-    st.markdown("#### 🔥 Feature Correlation Heatmap")
 
-    fig_corr, ax = plt.subplots(figsize=(14, 10))
-
-    # Compute correlation matrix
+    # Compute correlation matrix (numeric only)
     corr = df.corr(numeric_only=True)
 
-    # Mask the upper triangle for a cleaner lower-triangle heatmap (matches your image)
+    # Create mask for upper triangle
     mask = np.triu(np.ones_like(corr, dtype=bool))
+    corr_mask = corr.mask(mask)
+    fig_corr = px.imshow(
+        corr_mask,
+        text_auto=".3f",
+        aspect="equal",
+        labels=dict(color="Correlation"),
+        color_continuous_scale="RdBu_r",
+        zmin=-1, zmax=1,
+        title="Feature Correlation"
+        )
+    fig_corr.update_layout(xaxis_side="bottom")
+    st.plotly_chart(fig_corr, use_container_width=True)
+    
+    # - Matplotlib heatmap (for download/export)
+    fig_corr, ax = plt.subplots(figsize=(14, 10))
+    
+    # BMI vs Age
+    if all(c in df.columns for c in ["age","bmi","diabetes"]):
+        fig_sc = px.scatter(df, x="age", y="bmi", color="diabetes",
+                            labels={"diabetes":"Diabetes"},
+                            title="BMI vs Age by Diabetes")
+        st.plotly_chart(fig_sc, use_container_width=True)
 
-    # Create the heatmap with better aesthetics
+    # PCA
+    num_df = df.select_dtypes(include="number").dropna()
+    pca = PCA(n_components=2)
+    coords = pca.fit_transform(StandardScaler().fit_transform(num_df))
+    pca_df = pd.DataFrame(coords, columns=["PC1","PC2"])
+    if "diabetes" in df.columns:
+        pca_df["diabetes"] = df.loc[num_df.index, "diabetes"].values
+        fig_p = px.scatter(pca_df, x="PC1", y="PC2", color="diabetes",
+                        title="PCA Projection")
+        st.plotly_chart(fig_p, use_container_width=True)
+    
+    # Create the heatmap (lower triangle only)
     sns.heatmap(
         corr,
         mask=mask,
         annot=True,
         fmt=".3f",
-        cmap="rocket_r",
+        cmap="rocket_r",  # same as your image
         linewidths=0.5,
+        square=True,
         cbar_kws={"shrink": 0.9},
         ax=ax
     )
@@ -528,7 +580,6 @@ with tab3:
     st.pyplot(fig_corr)
 
     # Optional: Export heatmap as PNG
-    from io import BytesIO
     buf = BytesIO()
     fig_corr.savefig(buf, format="png")
     st.download_button(
