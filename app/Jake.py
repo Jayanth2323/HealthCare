@@ -14,11 +14,14 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import streamlit.components.v1 as components
 from io import BytesIO
+from PyPDF2 import PdfReader
+from docx import Document
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from dotenv import load_dotenv
 from fpdf import FPDF
+from babel.numbers import format_currency  # for currency formatting
 
 # === Font Bootstrap Helpers ===
 FONT_DIR  = "fonts"
@@ -109,6 +112,7 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
     # Persist PDF with a unique filename
     os.makedirs("data", exist_ok=True)
     filename = os.path.join("data", f"health_report_{uuid.uuid4().hex}.pdf")
+    
     pdf.output(filename)
     return filename
     unique_id = str(uuid.uuid4())
@@ -133,7 +137,9 @@ genai.configure(api_key=api_key)
 
 # === Streamlit Setup ===
 st.set_page_config(
-    page_title="JakeAI Healthcare Advisor", layout="wide", page_icon="🧠"
+    page_title="JakeAI Healthcare Advisor",
+    layout="wide",
+    page_icon="🧠"
 )
 
 # === Currency Formatter ===
@@ -163,37 +169,65 @@ def load_model():
 
 @st.cache_data
 def load_data():
-    import os
-    import pandas as pd
-
-    # 1) Load the “real” dataset
-    data_path = "data/cleaned_blood_data.csv"
-    if not os.path.isfile(data_path):
-        st.error(f"❌ Base data missing at '{data_path}'.")
+    # 1) Load the "real" dataset
+    base_path = "data/cleaned_blood_data.csv"
+    base_df = pd.DataFrame()
+    if not os.path.isfile(base_path):
+        st.error(f"❌ Base data missing at '{base_path}'.")
         return pd.DataFrame()
-    base_df = pd.read_csv(data_path)
-
-    # 2) Try to load & append the synthetic CSV
-    synthetic_path = "data/synthetic_patient_dataset.csv"
-    if os.path.isfile(synthetic_path):
-        synthetic_df = pd.read_csv(synthetic_path)
-        # only keep columns that both frames share
-        common_cols = [c for c in synthetic_df.columns if c in base_df.columns]
-        synthetic_df = synthetic_df[common_cols]
-        combined = pd.concat([base_df, synthetic_df], ignore_index=True)
-        st.success(f"✅ Loaded and appended {len(synthetic_df)} synthetic records.")
-        return combined
+        
     else:
-        st.warning(f"⚠️ Could not find '{synthetic_path}'. Using base data only.")
-        return base_df
+        base_df = pd.read_csv(base_path)
+
+    # 2) Load the synthetic dataset if present
+    synthetic_path = "data/synthetic_patient_dataset.csv"
+    synthetic_df = pd.DataFrame()
+    
+    if os.path.isfile(synthetic_path):
+        try:
+            # Load synthetic data
+            synthetic_df = pd.read_csv(synthetic_path)
+            
+            # Normalize column names to lowercase
+            synthetic_df.columns = synthetic_df.columns.str.lower()
+            
+            # Don't filter by base_df columns - keep all synthetic columns
+            # Only filter if we need to combine datasets (which we're not using)
+        except Exception as e:
+            st.error(f"❌ Error loading synthetic data: {e}")
+    else:
+        st.warning(f"⚠️ Synthetic data missing at '{synthetic_path}'. Using base data only.")
+        synthetic_df = pd.DataFrame()
+
+    return base_df, synthetic_df  # Return full synthetic dataset
 
 model = load_model()
-df = load_data()
+base_df, synthetic_df = load_data()
 
-if model is None or df.empty:
-    st.warning("⚠️ Missing essential resources (model/data). Please verify setup.")
-    st.stop()
+# Remove the combined_df creation since we're not using it
+# if model is None or base_df.empty:
+#     st.warning("⚠️ Missing essential resources (model/data). Please verify setup.")
+#     st.stop()
 
+# Create combined dataset for visualizations
+# if synthetic_df.empty:
+#     combined_df = base_df.copy()
+# else:
+#     common_cols = base_df.columns.intersection(synthetic_df.columns)
+#     combined_df = pd.concat([
+#         base_df[common_cols],
+#         synthetic_df[common_cols]
+#     ], ignore_index=True)
+
+# if model is None or base_df.empty:
+#     st.warning("⚠️ Missing essential resources (model/data). Please verify setup.")
+#     st.stop()
+
+# Prepare combined data
+# common_cols = base_df.columns
+# if not synthetic_df.empty:
+#     common_cols = common_cols.intersection(synthetic_df.columns)
+# combined_df = pd.concat([base_df[common_cols], synthetic_df.get(common_cols, pd.DataFrame())], ignore_index=True)
 
 # === SHAP Visualization Helper ===
 def st_shap(plot, height=None):
@@ -244,6 +278,11 @@ monetary = st.sidebar.slider(
     step=currency_range["step"],
 )
 
+try:
+    formatted_spending = format_currency(monetary, currency_symbol)
+except:
+    formatted_spending = f"{currency_symbol}{monetary}"
+
 time = st.sidebar.slider("⏳ Time Since Last Visit (months)", 0, 60, 12)
 formatted_spending = format_currency(monetary, currency_symbol)
 
@@ -272,66 +311,62 @@ with tab1:
     )
 
     if uploaded_file:
-        file_ext = os.path.splitext(uploaded_file.name)[-1].lower()
+        file_ext = os.path.splitext(uploaded_file.name)[1].lower()
 
-        if file_ext == ".csv":
-            try:
+        try:
+            if file_ext == ".csv":
                 batch_data = pd.read_csv(uploaded_file)
                 st.success("✅ CSV file uploaded successfully.")
-                batch_data["Prediction"] = model.predict(batch_data)
-                st.dataframe(batch_data)
-                st.download_button(
-                    "📥 Download Predictions",
-                    batch_data.to_csv(index=False),
-                    "batch_predictions.csv",
-                    mime="text/csv",
-                )
-            except Exception as e:
-                st.error(f"❌ Failed to process CSV: {e}")
-
-        elif file_ext in [".txt", ".md"]:
-            try:
+                
+                # Check if required columns exist
+                required_cols = ["Frequency", "Monetary", "Time"]
+                if all(col in batch_data.columns for col in required_cols):
+                    batch_data["Prediction"] = model.predict(batch_data[required_cols])
+                    st.success("✅ CSV processed.")
+                    st.dataframe(batch_data)
+                    st.download_button(
+                        "📥 Download Predictions",
+                        batch_data.to_csv(index=False),
+                        "batch_predictions.csv",
+                        mime="text/csv",
+                    )
+                else:
+                    missing = [col for col in required_cols if col not in batch_data.columns]
+                    st.error(f"❌ Missing required columns: {', '.join(missing)}")
+                    
+            elif file_ext in [".txt", ".md"]:
                 content = uploaded_file.read().decode("utf-8")
                 st.text_area("📄 File Content", content, height=300)
-            except Exception as e:
-                st.error(f"❌ Could not read text file: {e}")
-
-        elif file_ext == ".pdf":
-            try:
-                from PyPDF2 import PdfReader
-
+            elif file_ext == ".pdf":
                 reader = PdfReader(uploaded_file)
                 text = "".join([page.extract_text() or "" for page in reader.pages])
                 st.text_area("📑 Extracted PDF Text", text or "No text found.", height=300)
-            except Exception as e:
-                st.error(f"❌ PDF extraction failed: {e}")
-
-        elif file_ext == ".docx":
-            try:
-                from docx import Document
-
+            
+            elif file_ext == ".docx":
                 doc = Document(uploaded_file)
                 doc_text = "\n".join([para.text for para in doc.paragraphs])
                 st.text_area("📝 Word Document Content", doc_text, height=300)
-            except Exception as e:
-                st.error(f"❌ Word document processing failed: {e}")
+        
+            else:
+                st.warning(
+                        f"⚠️ File type '{file_ext}' not supported for processing. "
+                        "Please upload a supported format."
+                    )
+        except Exception as e:
+            st.error(f"❌ Word document processing failed: {e}")
 
-        else:
-            st.warning(
-                f"⚠️ File type '{file_ext}' not supported for processing. "
-                "Please upload a supported format."
-            )
+        # except Exception as e:
+        #     st.error(f"❌ PDF extraction failed: {e}")
+
 
     # Individual Recommendation
     if st.sidebar.button("💡 Generate Recommendation"):
         # 1) Build DataFrame for prediction
-        input_df = pd.DataFrame(
-            {
+        input_df = pd.DataFrame({
                 "Frequency": [frequency],
                 "Monetary": [monetary],
                 "Time": [time],
-            }
-        )
+            })
 
         # 2) Predict
         try:
@@ -459,9 +494,9 @@ with tab1:
                 }
             )
             avg = [
-                df["Frequency"].mean(),
-                df["Monetary"].mean(),
-                df["Time"].mean(),
+                base_df["Frequency"].mean(),
+                base_df["Monetary"].mean(),
+                base_df["Time"].mean(),
             ]
 
             fig_patient = go.Figure()
@@ -485,103 +520,190 @@ with tab1:
 # === Tab 2: Data Intelligence ===
 with tab2:
     st.subheader("📂 Dataset Overview")
-    col1, col2 = st.columns(2)
 
-    with col1:
-        st.markdown("#### Sample Data")
-        st.dataframe(df.head())
-        st.markdown("#### Summary Statistics")
-        st.dataframe(df.describe())
+    # === 🔹 ROW 1: Dataset Preview + Risk Class ===
+    st.markdown("### 🔍 Data Snapshot")
+    row1_col1, row1_col2 = st.columns([1.5, 1])  # Wider data table
 
-        st.markdown(
-            """
-        **Dataset Fields Overview:**
-        - Hemoglobin
-        - Blood Pressure
-        - Heart Rate
-        - Cholesterol
-        - White Blood Cell Count
-        - Glucose
-        - Gender
-        - Age
-        - Smoking Status
-        - Exercise Level
-        - BMI
-        - Blood Type
-        """
-        )
+    with row1_col1:
+        st.markdown("#### 🧾 Sample Data")
+        st.dataframe(base_df.head(), use_container_width=True)
 
-    with col2:
-        st.markdown("#### Risk Class Distribution")
-        fig_class = px.pie(
-            df, names="Class", title="Risk Class Distribution", hole=0.3
-        )
-        st.plotly_chart(fig_class, use_container_width=True)
+        st.markdown("#### 📊 Summary Statistics")
+        st.dataframe(base_df.describe(), use_container_width=True)
 
-        st.markdown("#### Missing Data Overview")
-        st.dataframe(df.isnull().sum().to_frame("Missing Count"))
+        st.markdown("#### 🧬 Dataset Fields")
+        st.markdown("""
+        - Hemoglobin | Blood Pressure | Heart Rate  
+        - Cholesterol | White Blood Cell Count | Glucose  
+        - Gender | Age | Smoking Status  
+        - Exercise Level | BMI | Blood Type  
+        """)
+
+    with row1_col2:
+        st.markdown("#### 🩺 Risk Class Distribution")
+        if "Class" in base_df.columns:
+            fig_class = px.pie(
+                base_df, names="Class", title="Risk Class Distribution", hole=0.3
+            )
+            fig_class.update_layout(height=300)
+            st.plotly_chart(fig_class, use_container_width=True)
+        else:
+            st.warning("⚠️ 'Class' column not available")
+        st.markdown("")
+
+    st.divider()
+
+    # === 🔹 ROW 2: Synthetic Gender & Diabetes ===
+    st.markdown("### 🧠 Synthetic Data Insights")
+    row2_col1, row2_col2 = st.columns(2)
+
+    with row2_col1:
+        st.markdown("#### 👥 Gender Distribution")
+        if synthetic_df.empty:
+            st.warning("⚠️ Synthetic dataset is empty.")
+        elif "gender" not in synthetic_df.columns:
+            st.warning("⚠️ 'gender' column not found.")
+            st.code(synthetic_df.columns.tolist())
+        else:
+            synthetic_df['gender_label'] = synthetic_df['gender'].apply(
+                lambda x: 'Male' if x >= 0.5 else 'Female'
+            )
+            gender_counts = synthetic_df['gender_label'].value_counts()
+
+            if not gender_counts.empty:
+                fig_gender = px.pie(
+                    base_df,
+                    names=gender_counts.index,
+                    values=gender_counts.values,
+                    title="Gender Distribution",
+                    hole=0.3
+                )
+                fig_gender.update_layout(height=300)
+                st.plotly_chart(fig_gender, use_container_width=True)
+            else:
+                st.warning("⚠️ No gender data after processing")
+            st.markdown("**🔢 Gender Summary**")
+            st.dataframe(synthetic_df['gender'].describe().to_frame(), use_container_width=True)
+
+    with row2_col2:
+        st.markdown("#### 🧪 Diabetes Distribution")
+        if synthetic_df.empty:
+            st.warning("⚠️ Synthetic dataset is empty.")
+        elif "diabetes" not in synthetic_df.columns:
+            st.warning("⚠️ 'diabetes' column not found.")
+            st.code(synthetic_df.columns.tolist())
+        else:
+            synthetic_df['diabetes_label'] = synthetic_df['diabetes'].apply(
+                lambda x: 'Diabetic' if x >= 1.5 else 'Non-Diabetic'
+            )
+            diabetes_counts = synthetic_df['diabetes_label'].value_counts()
+
+            if not diabetes_counts.empty:
+                fig_diabetes = px.pie(
+                    names=diabetes_counts.index,
+                    values=diabetes_counts.values,
+                    title="Diabetes Distribution",
+                    hole=0.3
+                )
+                fig_diabetes.update_layout(height=300)
+                st.plotly_chart(fig_diabetes, use_container_width=True)
+            else:
+                st.warning("⚠️ No diabetes data after processing")
+
+            st.markdown("**🔢 Diabetes Summary**")
+            st.dataframe(synthetic_df['diabetes'].describe().to_frame(), use_container_width=True)
+
+    # 🔎 Debug Info (optional toggle)
+    with st.expander("🛠️ Synthetic Data Debug Info"):
+        st.code(f"Shape: {synthetic_df.shape}")
+        st.code(f"Columns: {synthetic_df.columns.tolist()}")
+        if not synthetic_df.empty:
+            st.dataframe(synthetic_df.head(3), use_container_width=True)
+
+    # === 🔹 ROW 3 : Time Since Last Visit ===
+    st.markdown("### 🕰️ Time Since Last Visit")
+    row3_col1, row3_col2 = st.columns(2)
+    
+    with row3_col1:
+        if "Time" in base_df.columns:
+            st.markdown("#### Time Since Last Visit Distribution")
+            fig_time = px.histogram(
+                base_df, 
+                x="Time", 
+                title="Time Since Last Visit (months)",
+                nbins=20
+            )
+            st.plotly_chart(fig_time, use_container_width=True)
+        else:
+            st.info("⚠️ 'Time' column not available for distribution plot.")
 
 with tab3:
     st.subheader("📈 Model Performance & Insights")
 
-    # Compute correlation matrix (numeric only)
-    corr = df.corr(numeric_only=True)
+    # Load the dataset
+    base_df = pd.read_csv("./data/synthetic_patient_dataset.csv")
 
-    # Create mask for upper triangle
+    # Normalize column names
+    base_df.columns = base_df.columns.str.lower()
+    if "class" in base_df.columns:
+        base_df.rename(columns={"class": "diabetes"}, inplace=True)
+
+    # 1️⃣ Correlation heatmap
+    corr = base_df.corr(numeric_only=True)
     mask = np.triu(np.ones_like(corr, dtype=bool))
-    corr_mask = corr.mask(mask)
-    fig_corr = px.imshow(
-        corr_mask,
-        text_auto=".3f",
-        aspect="equal",
-        labels=dict(color="Correlation"),
-        color_continuous_scale="RdBu_r",
-        zmin=-1, zmax=1,
-        title="Feature Correlation"
-        )
-    fig_corr.update_layout(xaxis_side="bottom")
-    st.plotly_chart(fig_corr, use_container_width=True)
-    
-    # - Matplotlib heatmap (for download/export)
-    fig_corr, ax = plt.subplots(figsize=(14, 10))
-    
-    # BMI vs Age
-    if all(c in df.columns for c in ["age","bmi","diabetes"]):
-        fig_sc = px.scatter(df, x="age", y="bmi", color="diabetes",
-                            labels={"diabetes":"Diabetes"},
-                            title="BMI vs Age by Diabetes")
-        st.plotly_chart(fig_sc, use_container_width=True)
 
-    # PCA
-    num_df = df.select_dtypes(include="number").dropna()
-    pca = PCA(n_components=2)
-    coords = pca.fit_transform(StandardScaler().fit_transform(num_df))
-    pca_df = pd.DataFrame(coords, columns=["PC1","PC2"])
-    if "diabetes" in df.columns:
-        pca_df["diabetes"] = df.loc[num_df.index, "diabetes"].values
-        fig_p = px.scatter(pca_df, x="PC1", y="PC2", color="diabetes",
-                        title="PCA Projection")
-        st.plotly_chart(fig_p, use_container_width=True)
-    
-    # Create the heatmap (lower triangle only)
+    fig_corr, ax = plt.subplots(figsize=(20, 12))
     sns.heatmap(
         corr,
         mask=mask,
         annot=True,
         fmt=".3f",
-        cmap="rocket_r",  # same as your image
+        cmap="rocket_r",
         linewidths=0.5,
         square=True,
         cbar_kws={"shrink": 0.9},
         ax=ax
     )
-
     ax.set_title("Correlation Matrix of Health Features", fontsize=16)
-    st.pyplot(fig_corr)
 
-    # Optional: Export heatmap as PNG
+
+    corr_masked = corr.where(~mask)  # upper-triangle → NaN
+
+    # Build interactive Plotly heatmap
+    fig = px.imshow(
+        corr_masked,
+        text_auto=".3f",
+        color_continuous_scale=px.colors.sequential.Inferno_r[::-1],  # rocket_r
+        zmin=-1, zmax=1,
+        labels=dict(x="", y="", color="corr"),
+        width=1200, height=700
+    )
+    fig.update_layout(
+        title="Correlation Matrix of Health Features",
+        xaxis_side="bottom",
+        font=dict(size=12),
+        margin=dict(l=50, r=50, t=80, b=50)
+    )
+    # Rotate x-axis labels to match your style
+    fig.update_xaxes(tickangle=45, tickfont=dict(size=11))
+    fig.update_yaxes(tickfont=dict(size=11), autorange="reversed")
+
+    # Show interactive figure
+    st.plotly_chart(fig, use_container_width=True)
+
+
+    # Optional: Download button for the heatmap
     buf = BytesIO()
-    fig_corr.savefig(buf, format="png")
+    # generate the static one for PNG download
+    fig_static, ax = plt.subplots(figsize=(20,12))
+    sns.heatmap(corr, mask=mask,
+                annot=True, fmt=".3f",
+                cmap="rocket_r", linewidths=0.5,
+                square=True, cbar_kws={"shrink":0.9},
+                ax=ax)
+    ax.set_title("Correlation Matrix of Health Features", fontsize=16)
+    fig_static.savefig(buf, format="png", bbox_inches='tight')
     st.download_button(
         label="📥 Download Heatmap as PNG",
         data=buf.getvalue(),
@@ -589,11 +711,46 @@ with tab3:
         mime="image/png"
     )
 
-    # BMI vs Age by Diabetes Class
-    st.markdown("#### 📉 BMI vs Age by Diabetes Class")
-    if "bmi" in df.columns and "age" in df.columns and "diabetes" in df.columns:
+    # 2️⃣ Live Seaborn countplot for Gender vs Diabetes
+    
+    # Load and preprocess data
+    base_df = pd.read_csv("./data/synthetic_patient_dataset.csv")  
+    base_df_o = pd.read_csv("./data/cleaned_blood_data.csv")
+
+    # 1️⃣ Categorize gender (Assuming values near 0 = Female, 1 = Male)
+    base_df['gender_cat'] = base_df['gender'].apply(lambda x: 'Male' if x >= 0.5 else 'Female')
+
+    # 2️⃣ Categorize diabetes (Assuming a threshold for diagnosis, e.g., >=1.5 is diabetic)
+    base_df['diabetes_cat'] = base_df['diabetes'].apply(lambda x: 'Diabetic' if x >= 1.5 else 'Non-Diabetic')
+
+    # 3️⃣ Count Plot for Gender vs Diabetes
+    st.markdown("#### 👥 Gender Distribution by Diabetes Class")
+
+    fig_gender, ax_gender = plt.subplots(figsize=(8, 6))
+
+    sns.countplot(
+        data=base_df,
+        x="gender_cat",
+        hue="diabetes_cat",
+        palette=sns.color_palette("Set2", 2),
+        ax=ax_gender
+    )
+
+    # Enhance visuals
+    ax_gender.set_xlabel("Gender", fontsize=12)
+    ax_gender.set_ylabel("Count", fontsize=12)
+    ax_gender.set_title("Diabetes Distribution by Gender", fontsize=14)
+    ax_gender.legend(title="Diabetes", title_fontsize=11, fontsize=10)
+    ax_gender.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.7)
+
+    # Show the updated figure
+    st.pyplot(fig_gender)
+
+    # BMI vs Age colored by Diabetes
+    if all(c in base_df.columns for c in ["age", "bmi", "diabetes"]):
+        st.markdown("#### 📉 BMI vs Age by Diabetes Class")
         fig_bmi_age = px.scatter(
-            df,
+            base_df,
             x="age",
             y="bmi",
             color="diabetes",
@@ -603,18 +760,18 @@ with tab3:
         st.plotly_chart(fig_bmi_age, use_container_width=True)
     else:
         st.info("⚠️ Could not plot BMI vs Age: missing 'bmi', 'age' or 'diabetes' column.")
-
-    # PCA Visualization
+        
     st.markdown("#### 🧬 PCA: Patient Clusters")
-    numeric_df = df.select_dtypes(include="number").dropna()
-    scaler = StandardScaler()
-    scaled = scaler.fit_transform(numeric_df)
-    pca = PCA(n_components=2)
-    reduced = pca.fit_transform(scaled)
-    reduced_df = pd.DataFrame(reduced, columns=["PC1", "PC2"])
+    # PCA
+    numeric_df = base_df.select_dtypes(include="number").dropna()
+    if "diabetes" in base_df.columns and not numeric_df.empty:
+        scaler = StandardScaler()
+        scaled = scaler.fit_transform(numeric_df)
+        pca = PCA(n_components=2)
+        reduced = pca.fit_transform(scaled)
+        reduced_df = pd.DataFrame(reduced, columns=["PC1", "PC2"])
+        reduced_df["diabetes"] = base_df.loc[numeric_df.index, "diabetes"].values
 
-    if "diabetes" in df.columns:
-        reduced_df["diabetes"] = df.loc[numeric_df.index, "diabetes"].values
         fig_pca = px.scatter(
             reduced_df,
             x="PC1",
@@ -624,39 +781,60 @@ with tab3:
         )
         st.plotly_chart(fig_pca, use_container_width=True)
     else:
-        st.info("⚠️ Cannot show PCA plot because the 'diabetes' column is missing.")
+        st.info("⚠️ Cannot show PCA plot because required data is missing.")
 
-    st.markdown("#### Feature Distributions")
-    feat = st.selectbox("Choose a feature:", ["Frequency", "Monetary", "Time"])
-    fig_feat = px.box(
-        df, x="Class", y=feat, color="Class", title=f"{feat} by Risk Class"
-    )
-    st.plotly_chart(fig_feat, use_container_width=True)
 
-    st.markdown("#### Pairwise Feature Plot")
-    st.image("images/pairplot.png", caption="Pairwise Feature Analysis")
+    st.markdown("#### Feature Distributions by Risk Class")
+    if "Class" in base_df_o.columns:
+            feature_options = [col for col in ["Frequency", "Monetary", "Time"] if col in base_df_o.columns]
+            
+            if feature_options:
+                feat = st.selectbox("Choose a feature:", feature_options)
+                fig_box = px.box(
+                    base_df_o, 
+                    x="Class", 
+                    y=feat, 
+                    color="Class", 
+                    title=f"{feat} Distribution by Risk Class"
+                )
+                st.plotly_chart(fig_box, use_container_width=True)
+            else:
+                st.info("No suitable features available for distribution analysis")
+    else:
+        st.warning("'Class' column missing for distribution analysis")
 
     st.markdown("#### Model Evaluation Report")
-    try:
-        y_true = df["Class"]
-        y_pred = model.predict(df[["Frequency", "Monetary", "Time"]])
-        st.text("Classification Report:")
-        st.text(classification_report(y_true, y_pred))
-    except Exception as e:
-        st.warning(f"Could not compute model evaluation metrics: {e}")
+    # Check for required columns including 'Class'
+    # required_cols = ]
+    if all(col in base_df_o.columns for col in ["Frequency", "Monetary", "Time", "Class" ]):
+        try:
+            X = base_df_o[["Frequency", "Monetary", "Time"]]
+            y_true = base_df_o["Class"]
+            y_pred = model.predict(X)
+            
+            st.text("Classification Report:")
+            report = (classification_report(y_true, y_pred))
+            st.text(report)
+        except Exception as e:
+            st.warning(f"Could not compute model evaluation metrics: {e}")
+    else:
+        st.warning("Required columns for evaluation missing in dataset")
 
     st.markdown("#### Confusion Matrix")
-    try:
-        conf_matrix = confusion_matrix(y_true, y_pred)
-        fig_conf = px.imshow(
-            conf_matrix,
-            text_auto=True,
-            title="Confusion Matrix",
-            labels=dict(x="Predicted", y="Actual"),
-        )
-        st.plotly_chart(fig_conf, use_container_width=True)
-    except Exception as e:
-        st.warning(f"Could not render confusion matrix: {e}")
+    if y_true is not None and y_pred is not None:
+        try:
+            conf_matrix = confusion_matrix(y_true, y_pred)
+            fig_conf = px.imshow(
+                conf_matrix,
+                text_auto=True,
+                title="Confusion Matrix",
+                labels=dict(x="Predicted", y="Actual"),
+                )
+            st.plotly_chart(fig_conf, use_container_width=True)
+        except Exception as e:
+            st.warning(f"Could not render confusion matrix: {e}")
+    else:
+        st.warning("Confusion matrix unavailable - evaluation data missing")
 
 # === Tab 4: AI Chat Assistant ===
 with tab4:
