@@ -13,10 +13,18 @@ from sklearn.metrics import classification_report
 df = pd.read_csv("data/cleaned_blood_data.csv")
 
 # Define features and target
-X = df[[
-    "Age", "Gender", "Blood_Pressure", "Heart_Rate",
-    "Cholesterol", "Hemoglobin", "Smoking_Status", "Exercise_Level"
-]]
+X = df[
+    [
+        "Age",
+        "Gender",
+        "Blood_Pressure",
+        "Heart_Rate",
+        "Cholesterol",
+        "Hemoglobin",
+        "Smoking_Status",
+        "Exercise_Level",
+    ]
+]
 y = df["Class"]
 
 # Preprocessing
@@ -26,19 +34,22 @@ categorical_features = ["Gender", "Smoking_Status", "Exercise_Level"]
 numeric_pipeline = Pipeline([("scaler", StandardScaler())])
 categorical_pipeline = Pipeline([("encoder", OneHotEncoder(drop="first"))])
 
-preprocessor = ColumnTransformer([
-    ("num", numeric_pipeline, numeric_features),
-    ("cat", categorical_pipeline, categorical_features)
-])
+preprocessor = ColumnTransformer(
+    [
+        ("num", numeric_pipeline, numeric_features),
+        ("cat", categorical_pipeline, categorical_features),
+    ]
+)
 
 # Final pipeline
-model_pipeline = Pipeline([
-    ("preprocessor", preprocessor),
-    ("classifier", LogisticRegression(max_iter=1000))
-])
+model_pipeline = Pipeline(
+    [("preprocessor", preprocessor), ("classifier", LogisticRegression(max_iter=1000))]
+)
 
 # Train/Test Split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
 
 # Train model
 model_pipeline.fit(X_train, y_train)
