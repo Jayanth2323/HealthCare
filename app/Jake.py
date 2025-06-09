@@ -3,6 +3,7 @@ import uuid
 import urllib.request
 import logging
 import numpy as np
+from sklearn.pipeline import Pipeline
 import streamlit as st
 import pandas as pd
 import joblib
@@ -404,11 +405,17 @@ with tab1:
                 chat = chat_model.start_chat(history=[])
                 prompt = (
                     f"{health_summary.strip()}\n\n"
-                    "Based on the patient's profile, suggest:\n"
-                    "- Likely cause of risk\n"
-                    "- Recommended treatment or lifestyle changes\n"
-                    "- Specialist referrals\n"
-                    "- Rationale for the recommendation"
+                    "Based on the patient's complete profile and identified health risks, provide the following details:\n"
+                    "1. Likely cause(s) of the health risk.\n"
+                    "2. Recommended lifestyle, dietary, or behavioral changes.\n"
+                    "3. A detailed and specific treatment plan tailored to the condition.\n"
+                    "4. Exact **medication names (generic or brand)** that are commonly prescribed for this condition globally,\n"
+                    "   including the dosage form (e.g., tablet, capsule, injection), standard dosage range (if available),\n"
+                    "   and any important administration guidelines.\n"
+                    "5. Specialist doctor recommendations (if any).\n"
+                    "6. Rationale behind the treatment and medicine choice.\n"
+                    "7. Include warnings or contraindications for the mentioned medications.\n\n"
+                    "Only suggest medicines that are clinically approved and widely used. If no medicine is applicable, state clearly."
                 )
                 ai_response = chat.send_message(prompt)
                 response_text = ai_response.text or ""
@@ -418,6 +425,8 @@ with tab1:
                     st.markdown(response_text)
                 except Exception:
                     st.code(response_text)
+                    
+                    st.warning("⚠️ Disclaimer: This is an AI-generated suggestion. Always consult a certified medical professional before starting any medication.")
             except Exception as e:
                 st.error("❌ Jake AI failed to process the treatment plan.")
                 st.exception(e)
@@ -470,16 +479,66 @@ with tab1:
             )
             st.plotly_chart(fig_imp, use_container_width=True)
 
-            # SHAP Explainability
-            st.markdown("#### 🧠 Model Explainability (SHAP)")
-            with st.expander("Show SHAP values"):
-                try:
-                    preprocessed_input = model[:-1].transform(input_df)
-                    explainer = shap.LinearExplainer(classifier, preprocessed_input)
-                    shap_values = explainer(preprocessed_input)
-                    st_shap(shap.plots.waterfall(shap_values[0]))
-                except Exception as e:
-                    st.warning(f"SHAP could not be generated: {e}")
+        # === SHAP Explainability (dynamic step detection) ===
+        st.markdown("#### 🧠 Model Explainability (SHAP)")
+        with st.expander("Show SHAP values"):
+            try:
+                # ➤ Debug: Show model pipeline steps
+                st.write("🔍 Model pipeline steps:", model.named_steps)
+
+                preprocessor = None
+                classifier = None
+
+                # ➤ Scan pipeline (flat or nested)
+                for name, step in model.named_steps.items():
+                    if isinstance(step, Pipeline):
+                        for sub_name, sub_step in step.named_steps.items():
+                            if hasattr(sub_step, "transform") and not hasattr(sub_step, "predict_proba"):
+                                preprocessor = sub_step
+                            if hasattr(sub_step, "predict_proba"):
+                                classifier = sub_step
+                    else:
+                        if hasattr(step, "transform") and not hasattr(step, "predict_proba"):
+                            preprocessor = step
+                        if hasattr(step, "predict_proba"):
+                            classifier = step
+
+                    if preprocessor is None:
+                        raise ValueError("No transformer found in pipeline (step with .transform but not .predict_proba).")
+                    if classifier is None:
+                        raise ValueError("No classifier found in pipeline (step with .predict_proba).")
+
+                # ➤ Transform input data
+                X_pre = preprocessor.transform(input_df)
+
+                # ➤ SHAP Explainability with fallback
+                background = shap.sample(X_pre, 50)
+                explainer = shap.KernelExplainer(classifier.predict_proba, background)
+                shap_vals = explainer.shap_values(X_pre, nsamples=100)
+
+                # ➤ Pick SHAP array for binary/multiclass
+                shap_array = shap_vals[1] if isinstance(shap_vals, list) and len(shap_vals) > 1 else shap_vals
+
+                # ➤ Check for uniform SHAP values
+                if np.all(shap_array == shap_array[0]):
+                    st.info("ℹ️ SHAP values are uniform — model shows no feature influence for this input.")
+                    st.dataframe(pd.DataFrame(shap_array, columns=input_df.columns))
+                else:
+                    fig, ax = plt.subplots()
+                    shap.summary_plot(
+                        shap_array,
+                        features=X_pre,
+                        feature_names=input_df.columns.tolist(),
+                        plot_type="bar",
+                        show=False,
+                        alpha=0.8
+                    )
+                ax.set_title("SHAP Feature Contribution to High-Risk Prediction")
+                st.pyplot(fig)
+
+            except Exception as e:
+                st.warning(f"⚠️ SHAP could not be generated: {e}")
+
 
         with col2:
             st.markdown("#### 📊 Your Health Snapshot")
