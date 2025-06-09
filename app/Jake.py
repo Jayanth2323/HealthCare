@@ -520,7 +520,7 @@ with tab1:
                 shap_array = shap_vals[1] if isinstance(shap_vals, list) and len(shap_vals) > 1 else shap_vals
 
                 # ➤ Check for uniform SHAP values
-                if np.all(shap_array == shap_array[0]):
+                if np.allclose(shap_array, shap_array[0]):
                     st.info("ℹ️ SHAP values are uniform — model shows no feature influence for this input.")
                     st.dataframe(pd.DataFrame(shap_array, columns=input_df.columns))
                 else:
