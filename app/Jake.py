@@ -25,13 +25,14 @@ from fpdf import FPDF
 from babel.numbers import format_currency  # for currency formatting
 
 # === Font Bootstrap Helpers ===
-FONT_DIR  = "fonts"
+FONT_DIR = "fonts"
 FONT_NAME = "DejaVuSans.ttf"
 FONT_PATH = os.path.join(FONT_DIR, FONT_NAME)
 
 # CORRECTED RAW_URL: use raw.githubusercontent.com instead of github.com/raw
 # Updated RAW_URL as the previous one was returning 404
 RAW_URL = "https://github.com/dejavu-fonts/dejavu-fonts/raw/main/ttf/DejaVuSans.ttf"
+
 
 def _is_valid_ttf(path: str) -> bool:
     """
@@ -43,6 +44,7 @@ def _is_valid_ttf(path: str) -> bool:
     with open(path, "rb") as fh:
         tag = fh.read(4)
     return tag in (b"\x00\x01\x00\x00", b"true")
+
 
 def bootstrap_font() -> str:
     """
@@ -59,13 +61,16 @@ def bootstrap_font() -> str:
             logging.info("Downloading DejaVuSans.ttf …")
             urllib.request.urlretrieve(RAW_URL, FONT_PATH)
         except Exception as download_exc:
-            raise RuntimeError(f"Font download failed → {download_exc}") from download_exc
+            raise RuntimeError(
+                f"Font download failed → {download_exc}"
+            ) from download_exc
 
         # Re-check after download
         if not _is_valid_ttf(FONT_PATH):
             raise RuntimeError("Downloaded file is not a valid TrueType font.")
 
     return FONT_PATH
+
 
 # === Generate PDF Report ===
 def generate_pdf_report(health_summary: str, ai_response: str) -> str:
@@ -88,7 +93,9 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
         pdf.add_font("DejaVu", "", font_path, uni=True)
         pdf.set_font("DejaVu", size=12)
     except Exception as font_exc:
-        st.warning(f"⚠️ Could not add DejaVu TTF font: {font_exc}\nFalling back to Arial.")
+        st.warning(
+            f"⚠️ Could not add DejaVu TTF font: {font_exc}\nFalling back to Arial."
+        )
         pdf.set_font("Arial", size=12)
 
     # Title & Summary
@@ -100,20 +107,20 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
     # Gemini Recommendations
     try:
         pdf.set_font("DejaVu", "B", size=12)
-    except:
+    except BaseException:
         pdf.set_font("Arial", "B", size=12)
     pdf.cell(0, 10, "Gemini's Treatment Recommendations:", ln=True)
 
     try:
         pdf.set_font("DejaVu", size=12)
-    except:
+    except BaseException:
         pdf.set_font("Arial", size=12)
     pdf.multi_cell(0, 10, ai_response.strip())
 
     # Persist PDF with a unique filename
     os.makedirs("data", exist_ok=True)
     filename = os.path.join("data", f"health_report_{uuid.uuid4().hex}.pdf")
-    
+
     pdf.output(filename)
     return filename
     unique_id = str(uuid.uuid4())
@@ -125,6 +132,7 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
         return ""
 
     return output_path
+
 
 # === Load API Key ===
 load_dotenv()
@@ -138,10 +146,9 @@ genai.configure(api_key=api_key)
 
 # === Streamlit Setup ===
 st.set_page_config(
-    page_title="JakeAI Healthcare Advisor",
-    layout="wide",
-    page_icon="🧠"
+    page_title="JakeAI Healthcare Advisor", layout="wide", page_icon="🧠"
 )
+
 
 # === Currency Formatter ===
 def format_currency(amount, symbol):
@@ -159,14 +166,18 @@ def format_currency(amount, symbol):
         return f"{symbol}{abs_amt / 1e3:.1f}K"
     return f"{symbol}{amount:,}"
 
+
 # === Load Model & Data ===
 @st.cache_resource
 def load_model():
-    model_path = os.path.join("models", "logistic_regression_pipeline.pkl")  # "models/logistic_regression_pipeline.pkl"
+    model_path = os.path.join(
+        "models", "logistic_regression_pipeline.pkl"
+    )  # "models/logistic_regression_pipeline.pkl"
     if not os.path.isfile(model_path):
         st.error(f"❌ Model not found at '{model_path}'.")
         return None
     return joblib.load(model_path)
+
 
 @st.cache_data
 def load_data():
@@ -176,31 +187,35 @@ def load_data():
     if not os.path.isfile(base_path):
         st.error(f"❌ Base data missing at '{base_path}'.")
         return pd.DataFrame()
-        
+
     else:
         base_df = pd.read_csv(base_path)
 
     # 2) Load the synthetic dataset if present
     synthetic_path = "data/synthetic_patient_dataset.csv"
     synthetic_df = pd.DataFrame()
-    
+
     if os.path.isfile(synthetic_path):
         try:
             # Load synthetic data
             synthetic_df = pd.read_csv(synthetic_path)
-            
+
             # Normalize column names to lowercase
             synthetic_df.columns = synthetic_df.columns.str.lower()
-            
+
             # Don't filter by base_df columns - keep all synthetic columns
-            # Only filter if we need to combine datasets (which we're not using)
+            # Only filter if we need to combine datasets (which we're not
+            # using)
         except Exception as e:
             st.error(f"❌ Error loading synthetic data: {e}")
     else:
-        st.warning(f"⚠️ Synthetic data missing at '{synthetic_path}'. Using base data only.")
+        st.warning(
+            f"⚠️ Synthetic data missing at '{synthetic_path}'. Using base data only."
+        )
         synthetic_df = pd.DataFrame()
 
     return base_df, synthetic_df  # Return full synthetic dataset
+
 
 model = load_model()
 base_df, synthetic_df = load_data()
@@ -230,10 +245,12 @@ base_df, synthetic_df = load_data()
 #     common_cols = common_cols.intersection(synthetic_df.columns)
 # combined_df = pd.concat([base_df[common_cols], synthetic_df.get(common_cols, pd.DataFrame())], ignore_index=True)
 
+
 # === SHAP Visualization Helper ===
 def st_shap(plot, height=None):
     shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
     components.html(shap_html, height=height or 500, scrolling=True)
+
 
 # === Recommendation Mapping ===
 def generate_recommendation(pred_label: int) -> str:
@@ -243,17 +260,22 @@ def generate_recommendation(pred_label: int) -> str:
         2: "🚨 **High Risk**\nImmediate medical attention advised. Begin treatment under supervision.",
     }.get(pred_label, "❓ No recommendation available.")
 
+
 # === Sidebar Inputs ===
 st.sidebar.header("📝 Patient Profile")
 frequency = st.sidebar.slider("📅 Visit Frequency (visits/year)", 0, 50, 5)
-age = st.sidebar.number_input("🎂 Age", min_value=1, max_value=120, value=30)
+age = st.sidebar.number_input("🎂 Age", min_value=1, max_value=120, value=22)
 gender = st.sidebar.selectbox("👥 Gender", ["Male", "Female", "Other"])
 blood_pressure = st.sidebar.slider("🩸 Blood Pressure (mmHg)", 80, 200, 120)
 heart_rate = st.sidebar.slider("💓 Heart Rate (bpm)", 40, 180, 80)
 cholesterol = st.sidebar.slider("🧪 Cholesterol (mg/dL)", 100, 400, 200)
-hemoglobin = st.sidebar.slider("🩺 Hemoglobin (g/dL)", 8.0, 20.0, 14.0, step=0.1)
-smoking_status = st.sidebar.selectbox("🚬 Smoking Status", ["Non-smoker", "Smoker"])
-exercise_level = st.sidebar.selectbox("🏃 Exercise Level", ["Low", "Moderate", "High"])
+hemoglobin = st.sidebar.slider(
+    "🩺 Hemoglobin (g/dL)", 8.0, 20.0, 14.0, step=0.1)
+smoking_status = st.sidebar.selectbox(
+    "🚬 Smoking Status", ["Non-smoker", "Smoker"])
+exercise_level = st.sidebar.selectbox(
+    "🏃 Exercise Level", [
+        "Low", "Moderate", "High"])
 
 # Currency and default ranges based on economic context
 currency_options = {
@@ -269,7 +291,9 @@ currency_options = {
 }
 
 # Sidebar currency selection
-currency_symbol = st.sidebar.selectbox("💱 Choose Currency", list(currency_options.keys()))
+currency_symbol = st.sidebar.selectbox(
+    "💱 Choose Currency", list(currency_options.keys())
+)
 currency_range = currency_options[currency_symbol]
 monetary = st.sidebar.slider(
     f"💸 Annual Healthcare Spending ({currency_symbol})",
@@ -281,7 +305,7 @@ monetary = st.sidebar.slider(
 
 try:
     formatted_spending = format_currency(monetary, currency_symbol)
-except:
+except BaseException:
     formatted_spending = f"{currency_symbol}{monetary}"
 
 time = st.sidebar.slider("⏳ Time Since Last Visit (months)", 0, 60, 12)
@@ -318,11 +342,12 @@ with tab1:
             if file_ext == ".csv":
                 batch_data = pd.read_csv(uploaded_file)
                 st.success("✅ CSV file uploaded successfully.")
-                
+
                 # Check if required columns exist
                 required_cols = ["Frequency", "Monetary", "Time"]
                 if all(col in batch_data.columns for col in required_cols):
-                    batch_data["Prediction"] = model.predict(batch_data[required_cols])
+                    batch_data["Prediction"] = model.predict(
+                        batch_data[required_cols])
                     st.success("✅ CSV processed.")
                     st.dataframe(batch_data)
                     st.download_button(
@@ -332,42 +357,49 @@ with tab1:
                         mime="text/csv",
                     )
                 else:
-                    missing = [col for col in required_cols if col not in batch_data.columns]
-                    st.error(f"❌ Missing required columns: {', '.join(missing)}")
-                    
+                    missing = [
+                        col for col in required_cols if col not in batch_data.columns
+                    ]
+                    st.error(
+                        f"❌ Missing required columns: {', '.join(missing)}")
+
             elif file_ext in [".txt", ".md"]:
                 content = uploaded_file.read().decode("utf-8")
                 st.text_area("📄 File Content", content, height=300)
             elif file_ext == ".pdf":
                 reader = PdfReader(uploaded_file)
-                text = "".join([page.extract_text() or "" for page in reader.pages])
-                st.text_area("📑 Extracted PDF Text", text or "No text found.", height=300)
-            
+                text = "".join(
+                    [page.extract_text() or "" for page in reader.pages])
+                st.text_area(
+                    "📑 Extracted PDF Text", text or "No text found.", height=300
+                )
+
             elif file_ext == ".docx":
                 doc = Document(uploaded_file)
                 doc_text = "\n".join([para.text for para in doc.paragraphs])
                 st.text_area("📝 Word Document Content", doc_text, height=300)
-        
+
             else:
                 st.warning(
-                        f"⚠️ File type '{file_ext}' not supported for processing. "
-                        "Please upload a supported format."
-                    )
+                    f"⚠️ File type '{file_ext}' not supported for processing. "
+                    "Please upload a supported format."
+                )
         except Exception as e:
             st.error(f"❌ Word document processing failed: {e}")
 
         # except Exception as e:
         #     st.error(f"❌ PDF extraction failed: {e}")
 
-
     # Individual Recommendation
     if st.sidebar.button("💡 Generate Recommendation"):
         # 1) Build DataFrame for prediction
-        input_df = pd.DataFrame({
+        input_df = pd.DataFrame(
+            {
                 "Frequency": [frequency],
                 "Monetary": [monetary],
                 "Time": [time],
-            })
+            }
+        )
 
         # 2) Predict
         try:
@@ -425,8 +457,10 @@ with tab1:
                     st.markdown(response_text)
                 except Exception:
                     st.code(response_text)
-                    
-                    st.warning("⚠️ Disclaimer: This is an AI-generated suggestion. Always consult a certified medical professional before starting any medication.")
+
+                    st.warning(
+                        "⚠️ Disclaimer: This is an AI-generated suggestion. Always consult a certified medical professional before starting any medication."
+                    )
             except Exception as e:
                 st.error("❌ Jake AI failed to process the treatment plan.")
                 st.exception(e)
@@ -455,7 +489,9 @@ with tab1:
         col1, col2 = st.columns(2)
 
         with col1:
-            st.metric("Predicted Risk Level", ["Low", "Medium", "High"][prediction])
+            st.metric(
+                "Predicted Risk Level", [
+                    "Low", "Medium", "High"][prediction])
             st.metric("Prediction Confidence", confidence)
             st.markdown(recommendation)
 
@@ -479,65 +515,132 @@ with tab1:
             )
             st.plotly_chart(fig_imp, use_container_width=True)
 
-        # === SHAP Explainability (dynamic step detection) ===
-        st.markdown("#### 🧠 Model Explainability (SHAP)")
-        with st.expander("Show SHAP values"):
-            try:
-                # ➤ Debug: Show model pipeline steps
-                st.write("🔍 Model pipeline steps:", model.named_steps)
-
-                preprocessor = None
-                classifier = None
-
-                # ➤ Scan pipeline (flat or nested)
-                for name, step in model.named_steps.items():
-                    if isinstance(step, Pipeline):
-                        for sub_name, sub_step in step.named_steps.items():
-                            if hasattr(sub_step, "transform") and not hasattr(sub_step, "predict_proba"):
-                                preprocessor = sub_step
-                            if hasattr(sub_step, "predict_proba"):
-                                classifier = sub_step
+            # === SHAP Explainability (dynamic step detection with diagnostics & proper background) ===
+            st.markdown("#### 🧠 Model Explainability (SHAP)")
+            with st.expander("Show SHAP values"):
+                try:
+                    # 1) Identify classifier and preprocessor from pipeline
+                    if isinstance(model, Pipeline):
+                        classifier = model.steps[-1][1]
+                        preprocessor = Pipeline(model.steps[:-1]) if len(model.steps) > 1 else None
                     else:
-                        if hasattr(step, "transform") and not hasattr(step, "predict_proba"):
-                            preprocessor = step
-                        if hasattr(step, "predict_proba"):
-                            classifier = step
+                        if hasattr(model, "predict_proba"):
+                            classifier, preprocessor = model, None
+                        else:
+                            raise ValueError("Model is not a Pipeline and has no predict_proba.")
 
-                    if preprocessor is None:
-                        raise ValueError("No transformer found in pipeline (step with .transform but not .predict_proba).")
-                    if classifier is None:
-                        raise ValueError("No classifier found in pipeline (step with .predict_proba).")
+                    if not hasattr(classifier, "predict_proba"):
+                        raise ValueError("Detected classifier has no predict_proba method.")
 
-                # ➤ Transform input data
-                X_pre = preprocessor.transform(input_df)
+                    # 2) Inspect input_df
+                    st.write("🔍 input_df shape:", input_df.shape)
+                    st.write("🔍 input_df columns:", input_df.columns.tolist())
 
-                # ➤ SHAP Explainability with fallback
-                background = shap.sample(X_pre, 50)
-                explainer = shap.KernelExplainer(classifier.predict_proba, background)
-                shap_vals = explainer.shap_values(X_pre, nsamples=100)
+                    # Transform the single-row input
+                    if preprocessor is not None:
+                        X_pre = preprocessor.transform(input_df)
+                        st.write("🔍 Transformed input X_pre shape:", X_pre.shape)
+                    else:
+                        X_pre = input_df.values
+                        st.write("🔍 Raw input array X_pre shape:", X_pre.shape)
 
-                # ➤ Pick SHAP array for binary/multiclass
-                shap_array = shap_vals[1] if isinstance(shap_vals, list) and len(shap_vals) > 1 else shap_vals
+                    if X_pre.ndim != 2:
+                        raise ValueError(f"Expected transformed input to be 2D, but got shape: {X_pre.shape}")
 
-                # ➤ Check for uniform SHAP values
-                if np.allclose(shap_array, shap_array[0]):
-                    st.info("ℹ️ SHAP values are uniform — model shows no feature influence for this input.")
-                    st.dataframe(pd.DataFrame(shap_array, columns=input_df.columns))
-                else:
-                    fig, ax = plt.subplots()
-                    shap.summary_plot(
-                        shap_array,
-                        features=X_pre,
-                        feature_names=input_df.columns.tolist(),
-                        plot_type="bar",
-                        show=False,
-                        alpha=0.8
-                    )
-                ax.set_title("SHAP Feature Contribution to High-Risk Prediction")
-                st.pyplot(fig)
+                    # 3) Prepare background from training data (base_df)
+                    if "base_df" in globals() and not base_df.empty:
+                    # sample up to 100 rows
+                        bg_df = base_df[input_df.columns].sample(n=min(100, len(base_df)), random_state=42)
+                        if preprocessor is not None:
+                            background = preprocessor.transform(bg_df)
+                        else:
+                            background = bg_df.values
+                        st.write("🔍 Background after transform shape:", background.shape)
+                    else:
+                        raise ValueError("base_df is missing or empty; please supply a proper background dataset for SHAP.")
 
-            except Exception as e:
-                st.warning(f"⚠️ SHAP could not be generated: {e}")
+                    if background.ndim != 2:
+                        raise ValueError(f"Expected background array to be 2D, but got shape: {background.shape}")
+
+                    # 4) Create explainer & 5) compute SHAP values
+                    explainer = shap.KernelExplainer(classifier.predict_proba, background)
+                    shap_vals = explainer.shap_values(X_pre, nsamples=100)
+
+                    # 6) Pick the right class slice
+                    if isinstance(shap_vals, list):
+                    # binary or multiclass
+                        if len(shap_vals) == 2:
+                            shap_array = shap_vals[1]
+                            st.write("🔍 Explaining positive-class SHAP values (index 1)")
+                        else:
+                            idx = int(classifier.predict(X_pre)[0])
+                            shap_array = shap_vals[idx]
+                            st.write(f"🔍 Explaining class index {idx} SHAP values")
+                    elif isinstance(shap_vals, np.ndarray):
+                        if shap_vals.ndim == 2:
+                            shap_array = shap_vals
+                            st.write("🔍 shap_vals is 2D ndarray, using directly")
+                        elif shap_vals.ndim == 3:
+                            n_s, n_f, n_c = shap_vals.shape
+                            if n_c == 2:
+                                shap_array = shap_vals[:, :, 1]
+                                st.write("🔍 shap_vals is 3D ndarray, picking positive-class axis=2 index 1")
+                            else:
+                                idx = int(classifier.predict(X_pre)[0])
+                                shap_array = shap_vals[:, :, idx]
+                                st.write(f"🔍 shap_vals is 3D ndarray, picking predicted-class index {idx}")
+                        else:
+                            raise ValueError(f"Unexpected shap_vals ndarray ndim={shap_vals.ndim}")
+                    else:
+                        raise ValueError(f"Unexpected shap_vals type: {type(shap_vals)}")
+
+                    st.write("🔍 shap_array shape:", shap_array.shape)
+                    if shap_array.ndim != 2:
+                        raise ValueError(f"Expected shap_array to be 2D, but got: {shap_array.shape}")
+
+                    # 7) Uniformity / plotting
+                    n_samples, n_features = shap_array.shape
+                    feature_names = input_df.columns.tolist()
+
+                    if n_samples > 1:
+            # multiple inputs → compare rows
+                        if np.allclose(shap_array, shap_array[0], atol=1e-8):
+                            st.info("ℹ️ SHAP values are uniform across the samples — no variation in feature influence.")
+                            st.dataframe(pd.DataFrame(shap_array, columns=feature_names))
+                        else:
+                            fig, ax = plt.subplots()
+                            shap.summary_plot(
+                            shap_array,
+                            features=X_pre,
+                            feature_names=feature_names,
+                            plot_type="bar",
+                            show=False,
+                            alpha=0.8
+                        )
+                        ax.set_title("SHAP Feature Contribution")
+                        st.pyplot(fig)
+
+                    else:
+                        # single input → compare feature values
+                        row = shap_array[0]
+                        if np.allclose(row, np.full_like(row, row[0]), atol=1e-8):
+                            st.info("ℹ️ SHAP values for all features are nearly identical for this input.")
+                            st.dataframe(pd.DataFrame([row], columns=feature_names))
+                        else:
+                            fig, ax = plt.subplots()
+                            shap.summary_plot(
+                            row.reshape(1, -1),
+                            features=X_pre,
+                            feature_names=feature_names,
+                            plot_type="bar",
+                            show=False,
+                            alpha=0.8
+                        )
+                        ax.set_title("SHAP Feature Contribution")
+                        st.pyplot(fig)
+
+                except Exception as e:
+                    st.warning(f"⚠️ SHAP could not be generated: {e}")
 
 
         with col2:
@@ -560,7 +663,10 @@ with tab1:
 
             fig_patient = go.Figure()
             fig_patient.add_trace(
-                go.Bar(x=patient_df["Metric"], y=patient_df["Value"], name="You")
+                go.Bar(
+                    x=patient_df["Metric"],
+                    y=patient_df["Value"],
+                    name="You")
             )
             fig_patient.add_trace(
                 go.Scatter(
@@ -570,7 +676,8 @@ with tab1:
                     name="Population Avg",
                 )
             )
-            fig_patient.update_layout(title="Your Metrics vs Population Average")
+            fig_patient.update_layout(
+                title="Your Metrics vs Population Average")
             st.plotly_chart(fig_patient, use_container_width=True)
 
     else:
@@ -593,10 +700,10 @@ with tab2:
 
         st.markdown("#### 🧬 Dataset Fields")
         st.markdown("""
-        - Hemoglobin | Blood Pressure | Heart Rate  
-        - Cholesterol | White Blood Cell Count | Glucose  
-        - Gender | Age | Smoking Status  
-        - Exercise Level | BMI | Blood Type  
+        - Hemoglobin | Blood Pressure | Heart Rate
+        - Cholesterol | White Blood Cell Count | Glucose
+        - Gender | Age | Smoking Status
+        - Exercise Level | BMI | Blood Type
         """)
 
     with row1_col2:
@@ -625,10 +732,10 @@ with tab2:
             st.warning("⚠️ 'gender' column not found.")
             st.code(synthetic_df.columns.tolist())
         else:
-            synthetic_df['gender_label'] = synthetic_df['gender'].apply(
-                lambda x: 'Male' if x >= 0.5 else 'Female'
+            synthetic_df["gender_label"] = synthetic_df["gender"].apply(
+                lambda x: "Male" if x >= 0.5 else "Female"
             )
-            gender_counts = synthetic_df['gender_label'].value_counts()
+            gender_counts = synthetic_df["gender_label"].value_counts()
 
             if not gender_counts.empty:
                 fig_gender = px.pie(
@@ -636,14 +743,16 @@ with tab2:
                     names=gender_counts.index,
                     values=gender_counts.values,
                     title="Gender Distribution",
-                    hole=0.3
+                    hole=0.3,
                 )
                 fig_gender.update_layout(height=300)
                 st.plotly_chart(fig_gender, use_container_width=True)
             else:
                 st.warning("⚠️ No gender data after processing")
             st.markdown("**🔢 Gender Summary**")
-            st.dataframe(synthetic_df['gender'].describe().to_frame(), use_container_width=True)
+            st.dataframe(
+                synthetic_df["gender"].describe().to_frame(), use_container_width=True
+            )
 
     with row2_col2:
         st.markdown("#### 🧪 Diabetes Distribution")
@@ -653,17 +762,17 @@ with tab2:
             st.warning("⚠️ 'diabetes' column not found.")
             st.code(synthetic_df.columns.tolist())
         else:
-            synthetic_df['diabetes_label'] = synthetic_df['diabetes'].apply(
-                lambda x: 'Diabetic' if x >= 1.5 else 'Non-Diabetic'
+            synthetic_df["diabetes_label"] = synthetic_df["diabetes"].apply(
+                lambda x: "Diabetic" if x >= 1.5 else "Non-Diabetic"
             )
-            diabetes_counts = synthetic_df['diabetes_label'].value_counts()
+            diabetes_counts = synthetic_df["diabetes_label"].value_counts()
 
             if not diabetes_counts.empty:
                 fig_diabetes = px.pie(
                     names=diabetes_counts.index,
                     values=diabetes_counts.values,
                     title="Diabetes Distribution",
-                    hole=0.3
+                    hole=0.3,
                 )
                 fig_diabetes.update_layout(height=300)
                 st.plotly_chart(fig_diabetes, use_container_width=True)
@@ -671,7 +780,9 @@ with tab2:
                 st.warning("⚠️ No diabetes data after processing")
 
             st.markdown("**🔢 Diabetes Summary**")
-            st.dataframe(synthetic_df['diabetes'].describe().to_frame(), use_container_width=True)
+            st.dataframe(
+                synthetic_df["diabetes"].describe().to_frame(), use_container_width=True
+            )
 
     # 🔎 Debug Info (optional toggle)
     with st.expander("🛠️ Synthetic Data Debug Info"):
@@ -683,15 +794,12 @@ with tab2:
     # === 🔹 ROW 3 : Time Since Last Visit ===
     st.markdown("### 🕰️ Time Since Last Visit")
     row3_col1, row3_col2 = st.columns(2)
-    
+
     with row3_col1:
         if "Time" in base_df.columns:
             st.markdown("#### Time Since Last Visit Distribution")
             fig_time = px.histogram(
-                base_df, 
-                x="Time", 
-                title="Time Since Last Visit (months)",
-                nbins=20
+                base_df, x="Time", title="Time Since Last Visit (months)", nbins=20
             )
             st.plotly_chart(fig_time, use_container_width=True)
         else:
@@ -722,10 +830,9 @@ with tab3:
         linewidths=0.5,
         square=True,
         cbar_kws={"shrink": 0.9},
-        ax=ax
+        ax=ax,
     )
     ax.set_title("Correlation Matrix of Health Features", fontsize=16)
-
 
     corr_masked = corr.where(~mask)  # upper-triangle → NaN
 
@@ -733,16 +840,19 @@ with tab3:
     fig = px.imshow(
         corr_masked,
         text_auto=".3f",
-        color_continuous_scale=px.colors.sequential.Inferno_r[::-1],  # rocket_r
-        zmin=-1, zmax=1,
+        # rocket_r
+        color_continuous_scale=px.colors.sequential.Inferno_r[::-1],
+        zmin=-1,
+        zmax=1,
         labels=dict(x="", y="", color="corr"),
-        width=1200, height=700
+        width=1200,
+        height=700,
     )
     fig.update_layout(
         title="Correlation Matrix of Health Features",
         xaxis_side="bottom",
         font=dict(size=12),
-        margin=dict(l=50, r=50, t=80, b=50)
+        margin=dict(l=50, r=50, t=80, b=50),
     )
     # Rotate x-axis labels to match your style
     fig.update_xaxes(tickangle=45, tickfont=dict(size=11))
@@ -751,36 +861,46 @@ with tab3:
     # Show interactive figure
     st.plotly_chart(fig, use_container_width=True)
 
-
     # Optional: Download button for the heatmap
     buf = BytesIO()
     # generate the static one for PNG download
-    fig_static, ax = plt.subplots(figsize=(20,12))
-    sns.heatmap(corr, mask=mask,
-                annot=True, fmt=".3f",
-                cmap="rocket_r", linewidths=0.5,
-                square=True, cbar_kws={"shrink":0.9},
-                ax=ax)
+    fig_static, ax = plt.subplots(figsize=(20, 12))
+    sns.heatmap(
+        corr,
+        mask=mask,
+        annot=True,
+        fmt=".3f",
+        cmap="rocket_r",
+        linewidths=0.5,
+        square=True,
+        cbar_kws={"shrink": 0.9},
+        ax=ax,
+    )
     ax.set_title("Correlation Matrix of Health Features", fontsize=16)
-    fig_static.savefig(buf, format="png", bbox_inches='tight')
+    fig_static.savefig(buf, format="png", bbox_inches="tight")
     st.download_button(
         label="📥 Download Heatmap as PNG",
         data=buf.getvalue(),
         file_name="correlation_heatmap.png",
-        mime="image/png"
+        mime="image/png",
     )
 
     # 2️⃣ Live Seaborn countplot for Gender vs Diabetes
-    
+
     # Load and preprocess data
-    base_df = pd.read_csv("./data/synthetic_patient_dataset.csv")  
+    base_df = pd.read_csv("./data/synthetic_patient_dataset.csv")
     base_df_o = pd.read_csv("./data/cleaned_blood_data.csv")
 
     # 1️⃣ Categorize gender (Assuming values near 0 = Female, 1 = Male)
-    base_df['gender_cat'] = base_df['gender'].apply(lambda x: 'Male' if x >= 0.5 else 'Female')
+    base_df["gender_cat"] = base_df["gender"].apply(
+        lambda x: "Male" if x >= 0.5 else "Female"
+    )
 
-    # 2️⃣ Categorize diabetes (Assuming a threshold for diagnosis, e.g., >=1.5 is diabetic)
-    base_df['diabetes_cat'] = base_df['diabetes'].apply(lambda x: 'Diabetic' if x >= 1.5 else 'Non-Diabetic')
+    # 2️⃣ Categorize diabetes (Assuming a threshold for diagnosis, e.g., >=1.5
+    # is diabetic)
+    base_df["diabetes_cat"] = base_df["diabetes"].apply(
+        lambda x: "Diabetic" if x >= 1.5 else "Non-Diabetic"
+    )
 
     # 3️⃣ Count Plot for Gender vs Diabetes
     st.markdown("#### 👥 Gender Distribution by Diabetes Class")
@@ -792,7 +912,7 @@ with tab3:
         x="gender_cat",
         hue="diabetes_cat",
         palette=sns.color_palette("Set2", 2),
-        ax=ax_gender
+        ax=ax_gender,
     )
 
     # Enhance visuals
@@ -818,8 +938,10 @@ with tab3:
         )
         st.plotly_chart(fig_bmi_age, use_container_width=True)
     else:
-        st.info("⚠️ Could not plot BMI vs Age: missing 'bmi', 'age' or 'diabetes' column.")
-        
+        st.info(
+            "⚠️ Could not plot BMI vs Age: missing 'bmi', 'age' or 'diabetes' column."
+        )
+
     st.markdown("#### 🧬 PCA: Patient Clusters")
     # PCA
     numeric_df = base_df.select_dtypes(include="number").dropna()
@@ -836,43 +958,49 @@ with tab3:
             x="PC1",
             y="PC2",
             color="diabetes",
-            title="PCA Projection of Patient Features"
+            title="PCA Projection of Patient Features",
         )
         st.plotly_chart(fig_pca, use_container_width=True)
     else:
         st.info("⚠️ Cannot show PCA plot because required data is missing.")
 
-
     st.markdown("#### Feature Distributions by Risk Class")
     if "Class" in base_df_o.columns:
-            feature_options = [col for col in ["Frequency", "Monetary", "Time"] if col in base_df_o.columns]
-            
-            if feature_options:
-                feat = st.selectbox("Choose a feature:", feature_options)
-                fig_box = px.box(
-                    base_df_o, 
-                    x="Class", 
-                    y=feat, 
-                    color="Class", 
-                    title=f"{feat} Distribution by Risk Class"
-                )
-                st.plotly_chart(fig_box, use_container_width=True)
-            else:
-                st.info("No suitable features available for distribution analysis")
+        feature_options = [
+            col for col in ["Frequency", "Monetary", "Time"] if col in base_df_o.columns
+        ]
+
+        if feature_options:
+            feat = st.selectbox("Choose a feature:", feature_options)
+            fig_box = px.box(
+                base_df_o,
+                x="Class",
+                y=feat,
+                color="Class",
+                title=f"{feat} Distribution by Risk Class",
+            )
+            st.plotly_chart(fig_box, use_container_width=True)
+        else:
+            st.info("No suitable features available for distribution analysis")
     else:
         st.warning("'Class' column missing for distribution analysis")
+
+    st.markdown("#### 🧬 Feature Relationships")
+    st.image("./images/pairplot.png", caption="Pairwise Feature Distribution")
 
     st.markdown("#### Model Evaluation Report")
     # Check for required columns including 'Class'
     # required_cols = ]
-    if all(col in base_df_o.columns for col in ["Frequency", "Monetary", "Time", "Class" ]):
+    if all(
+        col in base_df_o.columns for col in ["Frequency", "Monetary", "Time", "Class"]
+    ):
         try:
             X = base_df_o[["Frequency", "Monetary", "Time"]]
             y_true = base_df_o["Class"]
             y_pred = model.predict(X)
-            
+
             st.text("Classification Report:")
-            report = (classification_report(y_true, y_pred))
+            report = classification_report(y_true, y_pred)
             st.text(report)
         except Exception as e:
             st.warning(f"Could not compute model evaluation metrics: {e}")
@@ -888,7 +1016,7 @@ with tab3:
                 text_auto=True,
                 title="Confusion Matrix",
                 labels=dict(x="Predicted", y="Actual"),
-                )
+            )
             st.plotly_chart(fig_conf, use_container_width=True)
         except Exception as e:
             st.warning(f"Could not render confusion matrix: {e}")
@@ -909,7 +1037,8 @@ with tab4:
         else:
             with st.spinner("Jake is thinking..."):
                 try:
-                    chat_model = genai.GenerativeModel("gemini-1.5-flash-latest")
+                    chat_model = genai.GenerativeModel(
+                        "gemini-1.5-flash-latest")
                     chat = chat_model.start_chat(history=[])
                     context = st.session_state.get("health_summary", "")
                     prompt = f"{context}\n\nPatient's Question: {user_input.strip()}"
@@ -922,15 +1051,13 @@ with tab4:
 # === Tab 5: About ===
 with tab5:
     st.subheader("ℹ️ About This App")
-    st.markdown(
-        """
+    st.markdown("""
     A cutting-edge healthcare recommendation system combining:
     - 🧠 Machine Learning (Logistic Regression)
     - 💬 Jake AI (Gemini)
     - 📊 Interactive Dashboards
     - 📄 SHAP Explainability + PDF Export
 
-    **Developed by:** Jayanth | Full Stack Developer & AI Enthusiast  
+    **Developed by:** Jayanth | Full Stack Developer & AI Enthusiast
     🔗 [GitHub Repository](https://github.com/Jayanth2323/HealthCare)
-    """
-    )
+    """)
