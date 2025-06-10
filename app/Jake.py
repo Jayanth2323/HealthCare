@@ -515,132 +515,132 @@ with tab1:
             )
             st.plotly_chart(fig_imp, use_container_width=True)
 
-            # === SHAP Explainability (dynamic step detection with diagnostics & proper background) ===
-            st.markdown("#### 🧠 Model Explainability (SHAP)")
-            with st.expander("Show SHAP values"):
-                try:
-                    # 1) Identify classifier and preprocessor from pipeline
-                    if isinstance(model, Pipeline):
-                        classifier = model.steps[-1][1]
-                        preprocessor = Pipeline(model.steps[:-1]) if len(model.steps) > 1 else None
-                    else:
-                        if hasattr(model, "predict_proba"):
-                            classifier, preprocessor = model, None
-                        else:
-                            raise ValueError("Model is not a Pipeline and has no predict_proba.")
+            # # === SHAP Explainability (dynamic step detection with diagnostics & proper background) ===
+            # st.markdown("#### 🧠 Model Explainability (SHAP)")
+            # with st.expander("Show SHAP values"):
+            #     try:
+            #         # 1) Identify classifier and preprocessor from pipeline
+            #         if isinstance(model, Pipeline):
+            #             classifier = model.steps[-1][1]
+            #             preprocessor = Pipeline(model.steps[:-1]) if len(model.steps) > 1 else None
+            #         else:
+            #             if hasattr(model, "predict_proba"):
+            #                 classifier, preprocessor = model, None
+            #             else:
+            #                 raise ValueError("Model is not a Pipeline and has no predict_proba.")
 
-                    if not hasattr(classifier, "predict_proba"):
-                        raise ValueError("Detected classifier has no predict_proba method.")
+            #         if not hasattr(classifier, "predict_proba"):
+            #             raise ValueError("Detected classifier has no predict_proba method.")
 
-                    # 2) Inspect input_df
-                    st.write("🔍 input_df shape:", input_df.shape)
-                    st.write("🔍 input_df columns:", input_df.columns.tolist())
+            #         # 2) Inspect input_df
+            #         st.write("🔍 input_df shape:", input_df.shape)
+            #         st.write("🔍 input_df columns:", input_df.columns.tolist())
 
-                    # Transform the single-row input
-                    if preprocessor is not None:
-                        X_pre = preprocessor.transform(input_df)
-                        st.write("🔍 Transformed input X_pre shape:", X_pre.shape)
-                    else:
-                        X_pre = input_df.values
-                        st.write("🔍 Raw input array X_pre shape:", X_pre.shape)
+            #         # Transform the single-row input
+            #         if preprocessor is not None:
+            #             X_pre = preprocessor.transform(input_df)
+            #             st.write("🔍 Transformed input X_pre shape:", X_pre.shape)
+            #         else:
+            #             X_pre = input_df.values
+            #             st.write("🔍 Raw input array X_pre shape:", X_pre.shape)
 
-                    if X_pre.ndim != 2:
-                        raise ValueError(f"Expected transformed input to be 2D, but got shape: {X_pre.shape}")
+            #         if X_pre.ndim != 2:
+            #             raise ValueError(f"Expected transformed input to be 2D, but got shape: {X_pre.shape}")
 
-                    # 3) Prepare background from training data (base_df)
-                    if "base_df" in globals() and not base_df.empty:
-                    # sample up to 100 rows
-                        bg_df = base_df[input_df.columns].sample(n=min(100, len(base_df)), random_state=42)
-                        if preprocessor is not None:
-                            background = preprocessor.transform(bg_df)
-                        else:
-                            background = bg_df.values
-                        st.write("🔍 Background after transform shape:", background.shape)
-                    else:
-                        raise ValueError("base_df is missing or empty; please supply a proper background dataset for SHAP.")
+            #         # 3) Prepare background from training data (base_df)
+            #         if "base_df" in globals() and not base_df.empty:
+            #         # sample up to 100 rows
+            #             bg_df = base_df[input_df.columns].sample(n=min(100, len(base_df)), random_state=42)
+            #             if preprocessor is not None:
+            #                 background = preprocessor.transform(bg_df)
+            #             else:
+            #                 background = bg_df.values
+            #             st.write("🔍 Background after transform shape:", background.shape)
+            #         else:
+            #             raise ValueError("base_df is missing or empty; please supply a proper background dataset for SHAP.")
 
-                    if background.ndim != 2:
-                        raise ValueError(f"Expected background array to be 2D, but got shape: {background.shape}")
+            #         if background.ndim != 2:
+            #             raise ValueError(f"Expected background array to be 2D, but got shape: {background.shape}")
 
-                    # 4) Create explainer & 5) compute SHAP values
-                    explainer = shap.KernelExplainer(classifier.predict_proba, background)
-                    shap_vals = explainer.shap_values(X_pre, nsamples=100)
+            #         # 4) Create explainer & 5) compute SHAP values
+            #         explainer = shap.KernelExplainer(classifier.predict_proba, background)
+            #         shap_vals = explainer.shap_values(X_pre, nsamples=100)
 
-                    # 6) Pick the right class slice
-                    if isinstance(shap_vals, list):
-                    # binary or multiclass
-                        if len(shap_vals) == 2:
-                            shap_array = shap_vals[1]
-                            st.write("🔍 Explaining positive-class SHAP values (index 1)")
-                        else:
-                            idx = int(classifier.predict(X_pre)[0])
-                            shap_array = shap_vals[idx]
-                            st.write(f"🔍 Explaining class index {idx} SHAP values")
-                    elif isinstance(shap_vals, np.ndarray):
-                        if shap_vals.ndim == 2:
-                            shap_array = shap_vals
-                            st.write("🔍 shap_vals is 2D ndarray, using directly")
-                        elif shap_vals.ndim == 3:
-                            n_s, n_f, n_c = shap_vals.shape
-                            if n_c == 2:
-                                shap_array = shap_vals[:, :, 1]
-                                st.write("🔍 shap_vals is 3D ndarray, picking positive-class axis=2 index 1")
-                            else:
-                                idx = int(classifier.predict(X_pre)[0])
-                                shap_array = shap_vals[:, :, idx]
-                                st.write(f"🔍 shap_vals is 3D ndarray, picking predicted-class index {idx}")
-                        else:
-                            raise ValueError(f"Unexpected shap_vals ndarray ndim={shap_vals.ndim}")
-                    else:
-                        raise ValueError(f"Unexpected shap_vals type: {type(shap_vals)}")
+            #         # 6) Pick the right class slice
+            #         if isinstance(shap_vals, list):
+            #         # binary or multiclass
+            #             if len(shap_vals) == 2:
+            #                 shap_array = shap_vals[1]
+            #                 st.write("🔍 Explaining positive-class SHAP values (index 1)")
+            #             else:
+            #                 idx = int(classifier.predict(X_pre)[0])
+            #                 shap_array = shap_vals[idx]
+            #                 st.write(f"🔍 Explaining class index {idx} SHAP values")
+            #         elif isinstance(shap_vals, np.ndarray):
+            #             if shap_vals.ndim == 2:
+            #                 shap_array = shap_vals
+            #                 st.write("🔍 shap_vals is 2D ndarray, using directly")
+            #             elif shap_vals.ndim == 3:
+            #                 n_s, n_f, n_c = shap_vals.shape
+            #                 if n_c == 2:
+            #                     shap_array = shap_vals[:, :, 1]
+            #                     st.write("🔍 shap_vals is 3D ndarray, picking positive-class axis=2 index 1")
+            #                 else:
+            #                     idx = int(classifier.predict(X_pre)[0])
+            #                     shap_array = shap_vals[:, :, idx]
+            #                     st.write(f"🔍 shap_vals is 3D ndarray, picking predicted-class index {idx}")
+            #             else:
+            #                 raise ValueError(f"Unexpected shap_vals ndarray ndim={shap_vals.ndim}")
+            #         else:
+            #             raise ValueError(f"Unexpected shap_vals type: {type(shap_vals)}")
 
-                    st.write("🔍 shap_array shape:", shap_array.shape)
-                    if shap_array.ndim != 2:
-                        raise ValueError(f"Expected shap_array to be 2D, but got: {shap_array.shape}")
+            #         st.write("🔍 shap_array shape:", shap_array.shape)
+            #         if shap_array.ndim != 2:
+            #             raise ValueError(f"Expected shap_array to be 2D, but got: {shap_array.shape}")
 
-                    # 7) Uniformity / plotting
-                    n_samples, n_features = shap_array.shape
-                    feature_names = input_df.columns.tolist()
+            #         # 7) Uniformity / plotting
+            #         n_samples, n_features = shap_array.shape
+            #         feature_names = input_df.columns.tolist()
 
-                    if n_samples > 1:
-            # multiple inputs → compare rows
-                        if np.allclose(shap_array, shap_array[0], atol=1e-8):
-                            st.info("ℹ️ SHAP values are uniform across the samples — no variation in feature influence.")
-                            st.dataframe(pd.DataFrame(shap_array, columns=feature_names))
-                        else:
-                            fig, ax = plt.subplots()
-                            shap.summary_plot(
-                            shap_array,
-                            features=X_pre,
-                            feature_names=feature_names,
-                            plot_type="bar",
-                            show=False,
-                            alpha=0.8
-                        )
-                        ax.set_title("SHAP Feature Contribution")
-                        st.pyplot(fig)
+            #         if n_samples > 1:
+            # # multiple inputs → compare rows
+            #             if np.allclose(shap_array, shap_array[0], atol=1e-8):
+            #                 st.info("ℹ️ SHAP values are uniform across the samples — no variation in feature influence.")
+            #                 st.dataframe(pd.DataFrame(shap_array, columns=feature_names))
+            #             else:
+            #                 fig, ax = plt.subplots()
+            #                 shap.summary_plot(
+            #                 shap_array,
+            #                 features=X_pre,
+            #                 feature_names=feature_names,
+            #                 plot_type="bar",
+            #                 show=False,
+            #                 alpha=0.8
+            #             )
+            #             ax.set_title("SHAP Feature Contribution")
+            #             st.pyplot(fig)
 
-                    else:
-                        # single input → compare feature values
-                        row = shap_array[0]
-                        if np.allclose(row, np.full_like(row, row[0]), atol=1e-8):
-                            st.info("ℹ️ SHAP values for all features are nearly identical for this input.")
-                            st.dataframe(pd.DataFrame([row], columns=feature_names))
-                        else:
-                            fig, ax = plt.subplots()
-                            shap.summary_plot(
-                            row.reshape(1, -1),
-                            features=X_pre,
-                            feature_names=feature_names,
-                            plot_type="bar",
-                            show=False,
-                            alpha=0.8
-                        )
-                        ax.set_title("SHAP Feature Contribution")
-                        st.pyplot(fig)
+            #         else:
+            #             # single input → compare feature values
+            #             row = shap_array[0]
+            #             if np.allclose(row, np.full_like(row, row[0]), atol=1e-8):
+            #                 st.info("ℹ️ SHAP values for all features are nearly identical for this input.")
+            #                 st.dataframe(pd.DataFrame([row], columns=feature_names))
+            #             else:
+            #                 fig, ax = plt.subplots()
+            #                 shap.summary_plot(
+            #                 row.reshape(1, -1),
+            #                 features=X_pre,
+            #                 feature_names=feature_names,
+            #                 plot_type="bar",
+            #                 show=False,
+            #                 alpha=0.8
+            #             )
+            #             ax.set_title("SHAP Feature Contribution")
+            #             st.pyplot(fig)
 
-                except Exception as e:
-                    st.warning(f"⚠️ SHAP could not be generated: {e}")
+            #     except Exception as e:
+            #         st.warning(f"⚠️ SHAP could not be generated: {e}")
 
 
         with col2:
@@ -845,18 +845,18 @@ with tab3:
         zmin=-1,
         zmax=1,
         labels=dict(x="", y="", color="corr"),
-        width=1200,
-        height=700,
+        width=1400,
+        height=900,
     )
     fig.update_layout(
         title="Correlation Matrix of Health Features",
         xaxis_side="bottom",
-        font=dict(size=12),
-        margin=dict(l=50, r=50, t=80, b=50),
+        font=dict(size=14),
+        margin=dict(l=100, r=100, t=100, b=100),
     )
     # Rotate x-axis labels to match your style
-    fig.update_xaxes(tickangle=45, tickfont=dict(size=11))
-    fig.update_yaxes(tickfont=dict(size=11), autorange="reversed")
+    fig.update_xaxes(tickangle=45, tickfont=dict(size=12))
+    fig.update_yaxes(tickfont=dict(size=12), autorange="reversed")
 
     # Show interactive figure
     st.plotly_chart(fig, use_container_width=True)
@@ -864,7 +864,7 @@ with tab3:
     # Optional: Download button for the heatmap
     buf = BytesIO()
     # generate the static one for PNG download
-    fig_static, ax = plt.subplots(figsize=(20, 12))
+    fig_static, ax = plt.subplots(figsize=(24, 14))
     sns.heatmap(
         corr,
         mask=mask,
