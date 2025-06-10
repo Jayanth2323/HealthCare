@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 venv/
+testenv/
 venv/Lib
 .env
 *.ipynb_checkpoints
