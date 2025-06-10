@@ -1,0 +1,14 @@
+[general]
+python_version = "3.11"
+
+[server]
+headless = true
+port = 8501
+enableCORS = false
+
+[theme]
+primaryColor = "#4CAF50"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F5F5"
+textColor = "#262730"
+font = "sans serif"
