@@ -73,3 +73,26 @@ dependencies = [
     "psutil==7.0.0",
     "watchdog==6.0.0"
 ]
+[tool.poetry]
+name        = "jakeai-healthcare-app"
+version     = "0.1.0"
+description = "Personalized healthcare recommendation Streamlit app using ML and Gemini AI."
+authors     = ["Jayanth <jayanth@example.com>"]
+
+[tool.poetry.dependencies]
+python           = ">=3.11,<3.12"
+streamlit        = ">=1.45.1"
+pandas           = ">=2.3.0"
+numpy            = ">=2.3.0"
+matplotlib       = ">=3.10.3"
+seaborn          = ">=0.13.2"
+scikit-learn     = ">=1.7.0"
+plotly           = ">=6.1.2"
+shap             = ">=0.47.2"
+joblib           = ">=1.5.1"
+fpdf             = ">=1.7.2"
+PyPDF2           = ">=3.0.1"
+python-docx      = ">=1.1.2"
+python-dotenv    = ">=1.1.0"
+google-generativeai = ">=0.8.5"
+Babel            = ">=2.17.0"
