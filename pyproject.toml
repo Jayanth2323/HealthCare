@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.11,<3.14"  # safer, unless Python 3.13 is a must
 name = "personalized-healthcare-recommendations"
 version = "0.1.0"
 description = "A machine learning project for personalized healthcare using feature analysis, explainability, and data analytics."
@@ -15,21 +15,61 @@ readme = "README.md"
 
 dependencies = [
     "streamlit==1.33.0",
+    "python-dotenv==1.0.1",
     "pandas==2.2.3",
     "numpy==1.26.4",
-    "scikit-learn==1.3.2",
+    "scikit-learn==1.4.2",
     "joblib==1.5.0",
-    "plotly==6.1.0",
     "matplotlib==3.8.4",
     "seaborn==0.13.2",
-    "google-generativeai==0.6.0",
-    "shap==0.41.0",
+    "plotly==6.1.0",
+    "scipy==1.15.3",
+    "xgboost==2.0.3",
+    "fpdf2==2.8.3",
     "PyPDF2==3.0.1",
     "python-docx==1.1.0",
-    "fpdf2==2.8.3",
-    "python-dotenv==1.0.1",
+    "shap==0.41.0",
+    "google-generativeai==0.6.4",
+    "google-api-core==2.25.0",
+    "google-api-python-client==2.70.0",
+    "google-auth==2.40.2",
+    "google-auth-httplib2==0.2.0",
+    "googleapis-common-protos==1.70.0",
+    "google-ai-generativelanguage==0.6.15",
+    "httplib2==0.22.0",
+    "protobuf==4.25.3",
+    "grpcio==1.71.0",
+    "grpcio-status==1.71.0",
+    "fpdf==1.7.2",
     "Babel==2.14.0",
-    "scipy==1.15.3",
+    "requests==2.32.3",
+    "urllib3==2.4.0",
+    "python-dateutil==2.9.0.post0",
+    "pytz==2025.2",
+    "typing-extensions==4.13.2",
+    "packaging==24.2",
+    "openai==1.82.0",
+    "Jinja2==3.1.6",
+    "MarkupSafe==3.0.2",
+    "ipython==8.36.0",
+    "ipykernel==6.29.5",
+    "jupyter-core==5.7.2",
+    "jupyter-client==8.6.3",
+    "nbformat==5.10.4",
     "numba==0.61.2",
-    "llvmlite==0.44.0"
+    "llvmlite==0.44.0",
+    "blinker==1.9.0",
+    "cachetools==5.5.2",
+    "certifi==2025.4.26",
+    "charset-normalizer==3.4.2",
+    "six==1.17.0",
+    "tqdm==4.67.1",
+    "traitlets==5.14.3",
+    "pyparsing==3.2.3",
+    "Pygments==2.19.1",
+    "decorator==5.2.1",
+    "nest-asyncio==1.6.0",
+    "platformdirs==4.3.8",
+    "psutil==7.0.0",
+    "watchdog==6.0.0"
 ]
