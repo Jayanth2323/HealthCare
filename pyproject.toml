@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-requires-python = ">=3.11,<3.14"  # safer, unless Python 3.13 is a must
+requires-python = ">=3.11,<3.14"
 name = "personalized-healthcare-recommendations"
 version = "0.1.0"
 description = "A machine learning project for personalized healthcare using feature analysis, explainability, and data analytics."
@@ -29,7 +29,7 @@ dependencies = [
     "PyPDF2==3.0.1",
     "python-docx==1.1.0",
     "shap==0.41.0",
-    "google-generativeai==0.3.2",
+    "google-generativeai==0.6.0", # Corrected version
     "google-api-core==2.25.0",
     "google-api-python-client==2.70.0",
     "google-auth==2.40.2",
@@ -47,14 +47,9 @@ dependencies = [
     "pytz==2025.2",
     "typing-extensions==4.13.2",
     "packaging==24.2",
-    "openai==1.82.0",
+    "openai==1.82.0", # Keep if intended for future use, otherwise can remove
     "Jinja2==3.1.6",
     "MarkupSafe==3.0.2",
-    "ipython==8.36.0",
-    "ipykernel==6.29.5",
-    "jupyter-core==5.7.2",
-    "jupyter-client==8.6.3",
-    "nbformat==5.10.4",
     "numba==0.61.2",
     "llvmlite==0.44.0",
     "blinker==1.9.0",
