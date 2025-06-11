@@ -3,7 +3,6 @@ import uuid
 import urllib.request
 import logging
 import numpy as np
-# from sklearn.pipeline import Pipeline
 import streamlit as st
 import pandas as pd
 import joblib
