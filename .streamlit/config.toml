@@ -1,0 +1,18 @@
+[general]
+python_version = "3.11"
+
+[server]
+headless = true
+port = 8501
+enableCORS = false
+enableXsrfProtection = false
+
+[browser]
+gatherUsageStats = false   # disable telemetry:contentReference[oaicite:22]{index=22}
+
+[theme]
+primaryColor = "#4E79A7"
+backgroundColor = "#F0F2F6"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#262730"
+font = "sans serif"
