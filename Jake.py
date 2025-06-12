@@ -79,7 +79,7 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
     or an empty string if generation failed.
     """
     try:
-        font_path = bootstrap_font()
+        font_path = os.path.join("fonts", "DejaVuSans.ttf")
     except Exception as font_boot_exc:
         st.error(f"❌ Unicode font bootstrap failed: {font_boot_exc}")
         return ""
