@@ -60,6 +60,7 @@ def bootstrap_font() -> str:
 
     # If the file doesn’t exist or fails the header check, attempt to download
     if not _is_valid_ttf(FONT_PATH):
+        logging.info("Downloading DejaVuSans.ttf …")
         try:
             logging.info("Downloading DejaVuSans.ttf …")
             urllib.request.urlretrieve(RAW_URL, FONT_PATH)

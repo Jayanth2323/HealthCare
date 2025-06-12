@@ -1,27 +1,117 @@
+import os
+import uuid
+import logging
+import urllib.request
+
+import streamlit as st
+from fpdf import FPDF
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 1) Configure your paths
+# ──────────────────────────────────────────────────────────────────────────────
+BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
+FONT_DIR  = os.path.join(BASE_DIR, "fonts")
+FONT_NAME = "DejaVuSans.ttf"
+FONT_PATH = os.path.join(FONT_DIR, FONT_NAME)
+
+RAW_URL = (
+    "https://github.com/dejavu-fonts/dejavu-fonts/"
+    "raw/main/ttf/DejaVuSans.ttf"
+)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 2) Font validation + download helper
+# ──────────────────────────────────────────────────────────────────────────────
+def _is_valid_ttf(path: str) -> bool:
+    """Quick sanity‐check: TTFs start with 0x00010000 or b'true'."""
+    if not os.path.isfile(path):
+        return False
+    with open(path, "rb") as fh:
+        tag = fh.read(4)
+    return tag in (b"\x00\x01\x00\x00", b"true")
+
+def bootstrap_font() -> str:
+    """
+    Ensures FONT_PATH points at a valid TTF file.
+    Downloads from RAW_URL if missing or invalid.
+    Raises RuntimeError on failure.
+    """
+    os.makedirs(FONT_DIR, exist_ok=True)
+
+    if not _is_valid_ttf(FONT_PATH):
+        logging.info("Downloading DejaVuSans.ttf …")
+        try:
+            urllib.request.urlretrieve(RAW_URL, FONT_PATH)
+        except Exception as ex:
+            raise RuntimeError(f"Font download failed: {ex}") from ex
+
+        if not _is_valid_ttf(FONT_PATH):
+            raise RuntimeError("Downloaded file is not a valid TrueType font.")
+
+    return FONT_PATH
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 3) PDF generation
+# ──────────────────────────────────────────────────────────────────────────────
 def generate_pdf_report(health_summary: str, ai_response: str) -> str:
+    """
+    Generates a PDF report with your health_summary and AI recommendations.
+    Uses DejaVuSans.ttf for full Unicode. Returns the saved file path,
+    or an empty string on failure.
+    """
+    # ——— Bootstrap the font ———
     try:
         font_path = bootstrap_font()
     except RuntimeError as e:
-        st.error(f"Could not prepare Unicode font: {e}")
+        st.error(f"❌ Could not prepare Unicode font: {e}")
         font_path = None
 
+    # ——— Create PDF ———
     pdf = FPDF()
     pdf.add_page()
 
-    # Only one add_font() call, using the same font_path
+    # ——— Register & select font ———
     if font_path:
-        pdf.add_font("DejaVu", "", font_path, uni=True)
-        pdf.set_font("DejaVu", size=12)
+        try:
+            pdf.add_font("DejaVu", "", font_path, uni=True)
+            pdf.set_font("DejaVu", size=12)
+        except Exception as font_exc:
+            st.warning(
+                f"⚠️ Could not add DejaVu font: {font_exc}\nFalling back to Arial."
+            )
+            pdf.set_font("Arial", size=12)
     else:
         pdf.set_font("Arial", size=12)
 
-    # … your PDF content …
+    # ——— Title & Summary ———
+    pdf.multi_cell(0, 10, "AI Healthcare Summary Report", align="C")
+    pdf.ln()
+    pdf.multi_cell(0, 10, health_summary.strip())
+    pdf.ln()
 
-    os.makedirs(os.path.join(BASE_DIR, "data"), exist_ok=True)
-    out = os.path.join(BASE_DIR, "data", f"health_report_{uuid.uuid4().hex}.pdf")
+    # ——— Recommendations header ———
     try:
-        pdf.output(out)
-    except Exception as ex:
-        st.error(f"Unable to save PDF report: {ex}")
+        pdf.set_font("DejaVu", "B", size=12)
+    except Exception:
+        pdf.set_font("Arial", "B", size=12)
+    pdf.cell(0, 10, "Gemini's Treatment Recommendations:", ln=True)
+
+    # ——— Recommendations body ———
+    try:
+        pdf.set_font("DejaVu", size=12)
+    except Exception:
+        pdf.set_font("Arial", size=12)
+    pdf.multi_cell(0, 10, ai_response.strip())
+
+    # ——— Save file ———
+    out_dir = os.path.join(BASE_DIR, "data")
+    os.makedirs(out_dir, exist_ok=True)
+    filename = os.path.join(out_dir, f"health_report_{uuid.uuid4().hex}.pdf")
+
+    try:
+        pdf.output(filename)
+    except Exception as export_exc:
+        st.error(f"❌ Unable to save PDF report: {export_exc}")
         return ""
-    return out
+
+    return filename
