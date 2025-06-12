@@ -56,13 +56,14 @@ def bootstrap_font() -> str:
     Returns the path to a valid TTF file.
     """
     os.makedirs(FONT_DIR, exist_ok=True)
-
-    # If the file doesn’t exist or fails the header check, attempt to download
+    st.write(f"bootstrap_font: checking {FONT_PATH}")
     if not _is_valid_ttf(FONT_PATH):
+        st.write("Font not valid or missing; attempting download...")
         logging.info(f"Downloading font to {FONT_PATH} DejaVuSans.ttf …")
         try:
             logging.info("Downloading DejaVuSans.ttf …")
             urllib.request.urlretrieve(RAW_URL, FONT_PATH)
+            st.write("Downloaded font to:", FONT_PATH)
         except Exception as download_exc:
             raise RuntimeError(
                 f"Font download failed → {download_exc}"
@@ -71,7 +72,8 @@ def bootstrap_font() -> str:
         # Re-check after download
         if not _is_valid_ttf(FONT_PATH):
             raise RuntimeError("Downloaded file is not a valid TrueType font.")
-
+    else:
+        st.write("Font already present and valid at:", FONT_PATH)
     return FONT_PATH
 
 
