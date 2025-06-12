@@ -56,25 +56,25 @@ def bootstrap_font() -> str:
     Returns the path to a valid TTF file.
     """
     os.makedirs(FONT_DIR, exist_ok=True)
-    st.write(f"bootstrap_font: checking {FONT_PATH}")
+    # st.write(f"bootstrap_font: checking {FONT_PATH}")
     if not _is_valid_ttf(FONT_PATH):
         st.write("Font not valid or missing; attempting download...")
         logging.info(f"Downloading font to {FONT_PATH} DejaVuSans.ttf …")
         try:
             logging.info("Downloading DejaVuSans.ttf …")
             urllib.request.urlretrieve(RAW_URL, FONT_PATH)
-            st.write("Downloaded font to:", FONT_PATH)
+            # st.write("Downloaded font to:", FONT_PATH)
         except Exception as download_exc:
             raise RuntimeError(
                 f"Font download failed → {download_exc}"
             ) from download_exc
 
         # Re-check after download
-        if not _is_valid_ttf(FONT_PATH):
-            raise RuntimeError("Downloaded file is not a valid TrueType font.")
-    else:
-        st.write("Font already present and valid at:", FONT_PATH)
-    return FONT_PATH
+    #     if not _is_valid_ttf(FONT_PATH):
+    #         raise RuntimeError("Downloaded file is not a valid TrueType font.")
+    # else:
+    #     st.write("Font already present and valid at:", FONT_PATH)
+    # return FONT_PATH
 
 
 # === Generate PDF Report ===
@@ -148,7 +148,7 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
     # 1) Bootstrap the font (downloads if missing)
     try:
         font_path = bootstrap_font()
-        st.write(f"Bootstrap font at: {font_path}")
+        # st.write(f"Bootstrap font at: {font_path}")
     except RuntimeError as e:
         st.error(f"Could not prepare Unicode font: {e}")
         font_path = None
@@ -205,8 +205,8 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
     except Exception as export_exc:
         st.error(f"❌ Unable to save PDF report: {export_exc}")
         return ""
-    st.write("BASE_DIR:", BASE_DIR)
-    st.write("Looking for font at:", FONT_PATH)
+    # st.write("BASE_DIR:", BASE_DIR)
+    # st.write("Looking for font at:", FONT_PATH)
     return filename
 
 
