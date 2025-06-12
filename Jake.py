@@ -80,6 +80,8 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
     """
     try:
         font_path = os.path.join("fonts", "DejaVuSans.ttf")
+        pdf.add_font("DejaVu", "", font_path, uni=True)
+
     except Exception as font_boot_exc:
         st.error(f"❌ Unicode font bootstrap failed: {font_boot_exc}")
         return ""
