@@ -68,6 +68,7 @@ streamlit run app.py
 
 ## ❤️ Built By
 
+**Jayanth Chennoju**
 **JakeAI**  
 Thanks to [OpenAI](https://openai.com), [Streamlit](https://streamlit.io), and the Python community!
 
