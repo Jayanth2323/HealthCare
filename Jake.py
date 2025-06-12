@@ -28,10 +28,13 @@ BASE_DIR = os.path.dirname(__file__)
 FONT_DIR = "fonts"
 FONT_NAME = "DejaVuSans.ttf"
 FONT_PATH = os.path.join(FONT_DIR, FONT_NAME)
-
-# CORRECTED RAW_URL: use raw.githubusercontent.com instead of github.com/raw
-# Updated RAW_URL as the previous one was returning 404
-RAW_URL = "https://github.com/dejavu-fonts/dejavu-fonts/raw/main/ttf/DejaVuSans.ttf"
+RAW_URL    = (
+    "https://github.com/dejavu-fonts/dejavu-fonts/"
+    "raw/main/ttf/DejaVuSans.ttf"
+)
+# RAW_URL = (
+#     "https://github.com/dejavu-fonts/dejavu-fonts/raw/main/ttf/DejaVuSans.ttf"
+#     )
 
 
 def _is_valid_ttf(path: str) -> bool:
