@@ -7,7 +7,7 @@
   </a>
   <br><br>
   <strong>Transform health data into insights with AI-powered dashboards</strong><br>
-  ⚡ Built with OpenAI GPT, Streamlit, Plotly, and Python
+  ⚡ Built with Gemini, OpenAI GPT, Streamlit, Plotly, and Python
 </p>
 
 ---
