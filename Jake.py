@@ -857,15 +857,12 @@ with tab3:
         st.warning("'Class' column missing for distribution analysis")
 
     st.markdown("#### 🧬 Feature Relationships")
-    fig = sns.pairplot(base_df)  # use your DataFrame
-    plt.tight_layout()
-    st.pyplot(fig)
-    img_path = "./images/pairplot.png"
-    if not os.path.exists(img_path):
-        
-        st.error(f"Image not found: {img_path}")
-    else:
-        st.image(img_path, caption="Pairwise Feature Distribution")
+    try:
+        pair_fig = sns.pairplot(base_df)
+        pair_fig.fig.suptitle("Pairwise Feature Distribution", y=1.02)
+        st.pyplot(pair_fig)
+    except Exception as e:
+        st.warning(f"Could not render pairplot: {e}")
     # st.image( caption="Pairwise Feature Distribution")
 
     st.markdown("#### Model Evaluation Report")
