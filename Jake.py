@@ -143,54 +143,54 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
     Uses DejaVuSans.ttf for Unicode support. Returns the path to the generated PDF file,
     or an empty string if generation failed.
     """
+    # 1) Bootstrap the font (downloads if missing)
     try:
         font_path = bootstrap_font()
     except RuntimeError as e:
         st.error(f"Could not prepare Unicode font: {e}")
         font_path = None
-        
+
     pdf = FPDF()
     pdf.add_page()
-    
+
+    # 2) Register & select the proper font
     if font_path:
-        pdf.add_font("DejaVu", "", font_path, uni=True)
-        pdf.set_font("DejaVu", size=12)
+        try:
+            pdf.add_font("DejaVu", "", font_path, uni=True)
+            pdf.set_font("DejaVu", size=12)
+        except Exception as font_exc:
+            st.warning(
+                f"⚠️ Could not add DejaVu TTF font: {font_exc}\nFalling back to Arial."
+            )
+            pdf.set_font("Arial", size=12)
     else:
         pdf.set_font("Arial", size=12)
 
-    font_path = os.path.join(BASE_DIR, "fonts", "DejaVuSans.ttf")
-    # Try to add DejaVu font for Unicode support
-    try:
-        pdf.add_font("DejaVu", "", font_path, uni=True)
-        pdf.set_font("DejaVu", size=12)
-    except Exception as font_exc:
-        st.warning(
-            f"⚠️ Could not add DejaVu TTF font: {font_exc}\nFalling back to default font."
-        )
-        pdf.set_font("Arial", size=12)
-
-    # Title & Summary
+    # 3) Title & Summary
     pdf.multi_cell(0, 10, "AI Healthcare Summary Report", align="C")
     pdf.ln()
     pdf.multi_cell(0, 10, health_summary.strip())
     pdf.ln()
 
-    # Gemini Recommendations header
+    # 4) Recommendations Header
+    #    Use bold if DejaVu is available, otherwise Arial bold
     try:
         pdf.set_font("DejaVu", "B", size=12)
     except Exception:
         pdf.set_font("Arial", "B", size=12)
     pdf.cell(0, 10, "Gemini's Treatment Recommendations:", ln=True)
 
+    # 5) Recommendations Body
     try:
         pdf.set_font("DejaVu", size=12)
     except Exception:
         pdf.set_font("Arial", size=12)
     pdf.multi_cell(0, 10, ai_response.strip())
 
-    # Persist PDF with a unique filename
-    os.makedirs(os.path.join(BASE_DIR,"data", exist_ok=True))
-    filename = os.path.join(BASE_DIR,"data", f"health_report_{uuid.uuid4().hex}.pdf")
+    # 6) Save to disk
+    out_dir = os.path.join(BASE_DIR, "data")
+    os.makedirs(out_dir, exist_ok=True)
+    filename = os.path.join(out_dir, f"health_report_{uuid.uuid4().hex}.pdf")
 
     try:
         pdf.output(filename)
@@ -199,6 +199,7 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
         return ""
 
     return filename
+
 
 # === Load API Key ===
 load_dotenv()
