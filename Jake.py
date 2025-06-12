@@ -985,7 +985,10 @@ with tab3:
         st.warning("'Class' column missing for distribution analysis")
 
     st.markdown("#### 🧬 Feature Relationships")
-    st.image("./images/pairplot.png", caption="Pairwise Feature Distribution")
+    fig = sns.pairplot(base_df)  # use your DataFrame
+    plt.tight_layout()
+    st.pyplot(fig)
+    st.image(caption="Pairwise Feature Distribution")
 
     st.markdown("#### Model Evaluation Report")
     # Check for required columns including 'Class'
