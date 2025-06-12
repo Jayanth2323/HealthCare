@@ -24,6 +24,7 @@ from fpdf import FPDF
 from babel.numbers import format_currency  # for currency formatting
 
 # === Font Bootstrap Helpers ===
+BASE_DIR = os.path.dirname(__file__)
 FONT_DIR = "fonts"
 FONT_NAME = "DejaVuSans.ttf"
 FONT_PATH = os.path.join(FONT_DIR, FONT_NAME)
@@ -139,10 +140,22 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
     Uses DejaVuSans.ttf for Unicode support. Returns the path to the generated PDF file,
     or an empty string if generation failed.
     """
+    try:
+        font_path = bootstrap_font()
+    except RuntimeError as e:
+        st.error(f"Could not prepare Unicode font: {e}")
+        font_path = None
+        
     pdf = FPDF()
     pdf.add_page()
+    
+    if font_path:
+        pdf.add_font("DejaVu", "", font_path, uni=True)
+        pdf.set_font("DejaVu", size=12)
+    else:
+        pdf.set_font("Arial", size=12)
 
-    font_path = os.path.join("fonts", "DejaVuSans.ttf")
+    font_path = os.path.join(BASE_DIR, "fonts", "DejaVuSans.ttf")
     # Try to add DejaVu font for Unicode support
     try:
         pdf.add_font("DejaVu", "", font_path, uni=True)
