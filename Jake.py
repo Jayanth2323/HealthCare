@@ -24,8 +24,8 @@ from fpdf import FPDF
 from babel.numbers import format_currency  # for currency formatting
 
 # === Font Bootstrap Helpers ===
-BASE_DIR = os.path.dirname(__file__)
-FONT_DIR = "fonts"
+BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+FONT_DIR   = os.path.join(BASE_DIR, "fonts")
 FONT_NAME = "DejaVuSans.ttf"
 FONT_PATH = os.path.join(FONT_DIR, FONT_NAME)
 RAW_URL    = (
