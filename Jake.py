@@ -189,8 +189,8 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
     pdf.multi_cell(0, 10, ai_response.strip())
 
     # Persist PDF with a unique filename
-    os.makedirs("data", exist_ok=True)
-    filename = os.path.join("data", f"health_report_{uuid.uuid4().hex}.pdf")
+    os.makedirs(os.path.join(BASE_DIR,"data", exist_ok=True))
+    filename = os.path.join(BASE_DIR,"data", f"health_report_{uuid.uuid4().hex}.pdf")
 
     try:
         pdf.output(filename)
