@@ -988,7 +988,7 @@ with tab3:
     fig = sns.pairplot(base_df)  # use your DataFrame
     plt.tight_layout()
     st.pyplot(fig)
-    st.image(caption="Pairwise Feature Distribution")
+    st.image("./images/pairplot.png", caption="Pairwise Feature Distribution")
 
     st.markdown("#### Model Evaluation Report")
     # Check for required columns including 'Class'
