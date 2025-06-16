@@ -21,7 +21,6 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from dotenv import load_dotenv
 from fpdf import FPDF
-from fpdf.enums import XPos,YPos
 from babel.numbers import format_currency  # for currency formatting
 
 # === Font Bootstrap Helpers ===
