@@ -30,10 +30,6 @@ FONT_PATH = os.path.join(FONT_DIR, "DejaVuSans.ttf")
 RAW_URL    = (
     "https://github.com/dejavu-fonts/dejavu-fonts/raw/main/ttf/DejaVuSans.ttf"
     )
-# RAW_URL = (
-#     "https://github.com/dejavu-fonts/dejavu-fonts/raw/main/ttf/DejaVuSans.ttf"
-#     )
-
 
 def _is_valid_ttf(path: str) -> bool:
     """
