@@ -430,7 +430,7 @@ with tab1:
             try:
                 response = client.models.generate_content(
                 # model="gemini-1.5-flash-002",
-                model = "gemini-1.0-pro"
+                model = "gemini-1.0-pro",
                 contents=prompt
                 )
 
