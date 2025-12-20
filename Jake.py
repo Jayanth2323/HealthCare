@@ -8,7 +8,7 @@ import pandas as pd
 import joblib
 import plotly.express as px
 import plotly.graph_objects as go
-from google import genai
+import google.generativeai as genai
 import shap
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -430,7 +430,7 @@ with tab1:
             try:
                 response = client.models.generate_content(
                 # model="gemini-1.5-flash-002",
-                model = "gemini-1.0-pro",
+                model = "gemini-pro",
                 contents=prompt
                 )
 
@@ -901,7 +901,7 @@ with tab4:
                     prompt = f"{context}\n\nPatient's Question: {user_input.strip()}"
 
                     response = client.models.generate_content(
-                        model="gemini-1.0-pro",
+                        model="gemini-pro",
                         contents=prompt
                     )
 
