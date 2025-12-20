@@ -992,22 +992,49 @@ with tab4:
     )
 
     user_input = st.text_area("💬 Enter your question:")
+
     if st.button("🚀 Ask Jake AI"):
         if not user_input.strip():
             st.warning("⚠️ Please enter a question before submitting.")
         else:
             with st.spinner("Jake is thinking..."):
                 try:
-                    chat_model = genai.GenerativeModel(
-                        "gemini-1.5-flash")
-                    chat = chat_model.start_chat(history=[])
                     context = st.session_state.get("health_summary", "")
-                    prompt = f"{context}\n\nPatient's Question: {user_input.strip()}"
-                    response = chat.send_message(prompt)
+                    prompt = f"{context}\n\nPatient's Question:\n{user_input.strip()}"
+
+                    response = client.models.generate_content(
+                        model="gemini-1.5-flash",
+                        contents=prompt
+                    )
+
                     st.markdown(response.text or "")
+
                 except Exception as e:
                     st.error("❌ Jake AI failed to process the question.")
                     st.exception(e)
+# with tab4:
+#     st.subheader("🤖 Jake's Chat Assistant")
+#     st.markdown(
+#         "Ask personalized health questions and get dynamic responses from Jake AI."
+#     )
+
+#     user_input = st.text_area("💬 Enter your question:")
+#     if st.button("🚀 Ask Jake AI"):
+#         if not user_input.strip():
+#             st.warning("⚠️ Please enter a question before submitting.")
+#         else:
+#             with st.spinner("Jake is thinking..."):
+#                 try:
+#                     chat_model = genai.GenerativeModel(
+#                         "gemini-1.5-flash")
+#                     chat = chat_model.start_chat(history=[])
+#                     context = st.session_state.get("health_summary", "")
+#                     prompt = f"{context}\n\nPatient's Question: {user_input.strip()}"
+#                     response = chat.send_message(prompt)
+#                     st.markdown(response.text or "")
+#                 except Exception as e:
+#                     st.error("❌ Jake AI failed to process the question.")
+#                     st.exception(e)
 
 # === Tab 5: About ===
 with tab5:
