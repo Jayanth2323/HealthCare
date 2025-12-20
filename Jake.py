@@ -8,7 +8,7 @@ import pandas as pd
 import joblib
 import plotly.express as px
 import plotly.graph_objects as go
-import google.generativeai as genai
+from google import genai
 import shap
 import seaborn as sns
 import matplotlib.pyplot as plt
