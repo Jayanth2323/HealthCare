@@ -142,14 +142,30 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
 # import os
 
 #client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+
+# load_dotenv()
+# client = genai.Client(api_key = os.getenv("GOOGLE_API_KEY"))
+# if not api_key:
+#     st.error(
+#         "❌ Gemini API key not found. Please set GOOGLE_API_KEY in your .env file."
+#     )
+#     st.stop()
+# genai.configure(api_key=api_key)
+
+# Load environment variables (local dev only)
 load_dotenv()
-client = genai.Client(api_key = os.getenv("GOOGLE_API_KEY"))
+
+# Fetch API key (works for both local + Streamlit Cloud)
+api_key = os.getenv("GOOGLE_API_KEY")
+
 if not api_key:
     st.error(
-        "❌ Gemini API key not found. Please set GOOGLE_API_KEY in your .env file."
+        "❌ Gemini API key not found. Please configure GOOGLE_API_KEY in Streamlit Secrets or environment variables."
     )
     st.stop()
-genai.configure(api_key=api_key)
+
+# Initialize Gemini client (NEW SDK – correct way)
+client = genai.Client(api_key=api_key)
 
 # === Streamlit Setup ===
 st.set_page_config(
