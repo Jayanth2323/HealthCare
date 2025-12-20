@@ -429,7 +429,8 @@ with tab1:
         with st.spinner("🔬 Analyzing treatment options using Jake..."):
             try:
                 response = client.models.generate_content(
-                model="gemini-1.5-flash-002",
+                # model="gemini-1.5-flash-002",
+                model = "gemini-1.0-pro"
                 contents=prompt
                 )
 
@@ -900,7 +901,7 @@ with tab4:
                     prompt = f"{context}\n\nPatient's Question: {user_input.strip()}"
 
                     response = client.models.generate_content(
-                        model="gemini-1.5-flash-002",
+                        model="gemini-1.0-pro",
                         contents=prompt
                     )
 
