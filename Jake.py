@@ -137,9 +137,13 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
     return filename
 
 
-# === Load API Key ===
+# # === Load API Key ===
+# from google import genai
+# import os
+
+#client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 load_dotenv()
-api_key = os.getenv("GOOGLE_API_KEY")
+client = genai.Client(api_key = os.getenv("GOOGLE_API_KEY"))
 if not api_key:
     st.error(
         "❌ Gemini API key not found. Please set GOOGLE_API_KEY in your .env file."
