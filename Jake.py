@@ -150,7 +150,7 @@ if not api_key:
     st.stop()
 
 # Initialize Gemini client (NEW SDK – correct way)
-client = genai.Client(api_key=api_key)
+genai.configure(api_key=api_key)
 
 # === Streamlit Setup ===
 st.set_page_config(
@@ -428,11 +428,8 @@ with tab1:
 
         with st.spinner("🔬 Analyzing treatment options using Jake..."):
             try:
-                response = client.models.generate_content(
-                # model="gemini-1.5-flash-002",
-                model = "gemini-pro",
-                contents=prompt
-                )
+                model = genai.GenerativeModel("gemini-pro")
+                response = model.generate_content(prompt)
 
                 response_text = response.text or ""
 
@@ -899,11 +896,9 @@ with tab4:
                 try:
                     context = st.session_state.get("health_summary", "")
                     prompt = f"{context}\n\nPatient's Question: {user_input.strip()}"
-
-                    response = client.models.generate_content(
-                        model="gemini-pro",
-                        contents=prompt
-                    )
+                    
+                    model = genai.GenerativeModel("gemini-pro")
+                    response = model.generate_content(prompt)
 
                     st.markdown(response.text or "")
                 except Exception as e:
