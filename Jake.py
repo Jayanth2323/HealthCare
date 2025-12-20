@@ -436,7 +436,7 @@ with tab1:
         # 4) Gemini AI Treatment Suggestion
         with st.spinner("🔬 Analyzing treatment options using Jake..."):
             try:
-                chat_model = genai.GenerativeModel("gemini-1.5-flash")
+                chat_model = genai.GenerativeModel("gemini-1.5-pro")
                 chat = chat_model.start_chat(history=[])
                 prompt = (
                     f"{health_summary.strip()}\n\n"
@@ -919,7 +919,7 @@ with tab4:
             with st.spinner("Jake is thinking..."):
                 try:
                     chat_model = genai.GenerativeModel(
-                        "gemini-1.5-flash")
+                        "gemini-1.5-pro")
                     chat = chat_model.start_chat(history=[])
                     context = st.session_state.get("health_summary", "")
                     prompt = f"{context}\n\nPatient's Question: {user_input.strip()}"
