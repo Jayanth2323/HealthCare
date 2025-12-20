@@ -434,40 +434,116 @@ with tab1:
         st.session_state["health_summary"] = health_summary
 
         # 4) Gemini AI Treatment Suggestion
+        prompt = (
+            f"{health_summary.strip()}\n\n"
+        "Based on the patient's complete profile and identified health risks, provide the following details:\n"
+        "1. Likely cause(s) of the health risk.\n"
+        "2. Recommended lifestyle, dietary, or behavioral changes.\n"
+        "3. A detailed and specific treatment plan tailored to the condition.\n"
+        "4. Exact medication names (generic or brand), dosage form, and standard dosage range.\n"
+        "5. Specialist doctor recommendations (if any).\n"
+        "6. Rationale behind the treatment and medicine choice.\n"
+        "7. Warnings or contraindications.\n\n"
+        "Only suggest medicines that are clinically approved and widely used."
+        )
+
         with st.spinner("🔬 Analyzing treatment options using Jake..."):
             try:
-                chat_model = genai.GenerativeModel("gemini-1.5-flash")
-                chat = chat_model.start_chat(history=[])
-                prompt = (
-                    f"{health_summary.strip()}\n\n"
-                    "Based on the patient's complete profile and identified health risks, provide the following details:\n"
-                    "1. Likely cause(s) of the health risk.\n"
-                    "2. Recommended lifestyle, dietary, or behavioral changes.\n"
-                    "3. A detailed and specific treatment plan tailored to the condition.\n"
-                    "4. Exact **medication names (generic or brand)** that are commonly prescribed for this condition globally,\n"
-                    "   including the dosage form (e.g., tablet, capsule, injection), standard dosage range (if available),\n"
-                    "   and any important administration guidelines.\n"
-                    "5. Specialist doctor recommendations (if any).\n"
-                    "6. Rationale behind the treatment and medicine choice.\n"
-                    "7. Include warnings or contraindications for the mentioned medications.\n\n"
-                    "Only suggest medicines that are clinically approved and widely used. If no medicine is applicable, state clearly."
+                response = client.models.generate_content(
+                model="gemini-1.5-flash",
+                contents=prompt
                 )
-                ai_response = chat.send_message(prompt)
-                response_text = ai_response.text or ""
+
+                response_text = response.text or ""
+
                 st.markdown("### 🧠 Jake's Auto Analysis")
                 st.success("✅ Jake's AI-driven treatment suggestions:")
-                try:
-                    st.markdown(response_text)
-                except Exception:
-                    st.code(response_text)
+                st.markdown(response_text)
 
-                    st.warning(
-                        "⚠️ Disclaimer: This is an AI-generated suggestion. Always consult a certified medical professional before starting any medication."
-                    )
+                st.warning(
+                    "⚠️ Disclaimer: This is an AI-generated suggestion. "
+                    "Always consult a certified medical professional before starting any medication."
+                )
+
             except Exception as e:
                 st.error("❌ Jake AI failed to process the treatment plan.")
                 st.exception(e)
                 response_text = ""
+        # # with st.spinner("🔬 Analyzing treatment options using Jake..."):
+        # #     try:
+        # #         response = client.models.generate_content(
+        # #             model="gemini-1.5-flash",
+        # #             contents=prompt
+        # #         )
+
+        # #         response_text = response.text or ""
+
+        # #         st.markdown("### 🧠 Jake's Auto Analysis")
+        # #         st.success("✅ Jake's AI-driven treatment suggestions:")
+        # #         st.markdown(response_text)
+
+        # #         st.warning(
+        # #             "⚠️ Disclaimer: Always consult a certified medical professional."
+        # #         )
+
+        # #     except Exception as e:
+        # #         st.error("❌ Jake AI failed to process the treatment plan.")
+        # #         st.exception(e)
+        # #         response_text = ""
+
+        #  prompt = (
+        #             f"{health_summary.strip()}\n\n"
+        #             "Based on the patient's complete profile and identified health risks, provide the following details:\n"
+        #             "1. Likely cause(s) of the health risk.\n"
+        #             "2. Recommended lifestyle, dietary, or behavioral changes.\n"
+        #             "3. A detailed and specific treatment plan tailored to the condition.\n"
+        #             "4. Exact **medication names (generic or brand)** that are commonly prescribed for this condition globally,\n"
+        #             "   including the dosage form (e.g., tablet, capsule, injection), standard dosage range (if available),\n"
+        #             "   and any important administration guidelines.\n"
+        #             "5. Specialist doctor recommendations (if any).\n"
+        #             "6. Rationale behind the treatment and medicine choice.\n"
+        #             "7. Include warnings or contraindications for the mentioned medications.\n\n"
+        #             "Only suggest medicines that are clinically approved and widely used. If no medicine is applicable, state clearly."
+        #         )
+        
+        # with st.spinner("🔬 Analyzing treatment options using Jake..."):
+        #     try:
+        #         response = client.models.generate_content(
+        #             model="gemini-1.5-flash",
+        #             contents=prompt
+        #         )
+        #         # chat_model = genai.GenerativeModel("gemini-1.5-flash")
+        #         # chat = chat_model.start_chat(history=[])
+        #         # prompt = (
+        #         #     f"{health_summary.strip()}\n\n"
+        #         #     "Based on the patient's complete profile and identified health risks, provide the following details:\n"
+        #         #     "1. Likely cause(s) of the health risk.\n"
+        #         #     "2. Recommended lifestyle, dietary, or behavioral changes.\n"
+        #         #     "3. A detailed and specific treatment plan tailored to the condition.\n"
+        #         #     "4. Exact **medication names (generic or brand)** that are commonly prescribed for this condition globally,\n"
+        #         #     "   including the dosage form (e.g., tablet, capsule, injection), standard dosage range (if available),\n"
+        #         #     "   and any important administration guidelines.\n"
+        #         #     "5. Specialist doctor recommendations (if any).\n"
+        #         #     "6. Rationale behind the treatment and medicine choice.\n"
+        #         #     "7. Include warnings or contraindications for the mentioned medications.\n\n"
+        #         #     "Only suggest medicines that are clinically approved and widely used. If no medicine is applicable, state clearly."
+        #         # )
+        #         # ai_response = chat.send_message(prompt)
+        #         response_text = ai_response.text or ""
+        #         st.markdown("### 🧠 Jake's Auto Analysis")
+        #         st.success("✅ Jake's AI-driven treatment suggestions:")
+        #         try:
+        #             st.markdown(response_text)
+        #         except Exception:
+        #             st.code(response_text)
+
+        #             st.warning(
+        #                 "⚠️ Disclaimer: This is an AI-generated suggestion. Always consult a certified medical professional before starting any medication."
+        #             )
+        #     except Exception as e:
+        #         st.error("❌ Jake AI failed to process the treatment plan.")
+        #         st.exception(e)
+        #         response_text = ""
 
         # 5) PDF Export
         if response_text:
