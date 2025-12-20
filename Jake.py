@@ -429,7 +429,7 @@ with tab1:
         with st.spinner("🔬 Analyzing treatment options using Jake..."):
             try:
                 response = client.models.generate_content(
-                model="gemini-1.5-pro",
+                model="gemini-1.5-flash-002",
                 contents=prompt
                 )
 
@@ -885,14 +885,11 @@ with tab3:
         st.warning("Confusion matrix unavailable - evaluation data missing")
 
 # === Tab 4: AI Chat Assistant ===
+
 with tab4:
     st.subheader("🤖 Jake's Chat Assistant")
-    st.markdown(
-        "Ask personalized health questions and get dynamic responses from Jake AI."
-    )
 
     user_input = st.text_area("💬 Enter your question:")
-
     if st.button("🚀 Ask Jake AI"):
         if not user_input.strip():
             st.warning("⚠️ Please enter a question before submitting.")
@@ -900,18 +897,45 @@ with tab4:
             with st.spinner("Jake is thinking..."):
                 try:
                     context = st.session_state.get("health_summary", "")
-                    prompt = f"{context}\n\nPatient's Question:\n{user_input.strip()}"
+                    prompt = f"{context}\n\nPatient's Question: {user_input.strip()}"
 
                     response = client.models.generate_content(
-                        model="gemini-1.5-pro",
+                        model="gemini-1.5-flash-002",
                         contents=prompt
                     )
 
                     st.markdown(response.text or "")
-
                 except Exception as e:
                     st.error("❌ Jake AI failed to process the question.")
                     st.exception(e)
+
+# with tab4:
+#     st.subheader("🤖 Jake's Chat Assistant")
+#     st.markdown(
+#         "Ask personalized health questions and get dynamic responses from Jake AI."
+#     )
+
+#     user_input = st.text_area("💬 Enter your question:")
+
+#     if st.button("🚀 Ask Jake AI"):
+#         if not user_input.strip():
+#             st.warning("⚠️ Please enter a question before submitting.")
+#         else:
+#             with st.spinner("Jake is thinking..."):
+#                 try:
+#                     context = st.session_state.get("health_summary", "")
+#                     prompt = f"{context}\n\nPatient's Question:\n{user_input.strip()}"
+
+#                     response = client.models.generate_content(
+#                         model="gemini-1.5-pro",
+#                         contents=prompt
+#                     )
+
+#                     st.markdown(response.text or "")
+
+#                 except Exception as e:
+#                     st.error("❌ Jake AI failed to process the question.")
+#                     st.exception(e)
                     
 # === Tab 5: About ===
 with tab5:
