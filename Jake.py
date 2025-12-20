@@ -138,21 +138,6 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
 
 
 # # === Load API Key ===
-# from google import genai
-# import os
-
-#client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-
-# load_dotenv()
-# client = genai.Client(api_key = os.getenv("GOOGLE_API_KEY"))
-# if not api_key:
-#     st.error(
-#         "❌ Gemini API key not found. Please set GOOGLE_API_KEY in your .env file."
-#     )
-#     st.stop()
-# genai.configure(api_key=api_key)
-
-# Load environment variables (local dev only)
 load_dotenv()
 
 # Fetch API key (works for both local + Streamlit Cloud)
@@ -242,32 +227,6 @@ def load_data():
 
 model = load_model()
 base_df, synthetic_df = load_data()
-
-# Remove the combined_df creation since we're not using it
-# if model is None or base_df.empty:
-#     st.warning("⚠️ Missing essential resources (model/data). Please verify setup.")
-#     st.stop()
-
-# Create combined dataset for visualizations
-# if synthetic_df.empty:
-#     combined_df = base_df.copy()
-# else:
-#     common_cols = base_df.columns.intersection(synthetic_df.columns)
-#     combined_df = pd.concat([
-#         base_df[common_cols],
-#         synthetic_df[common_cols]
-#     ], ignore_index=True)
-
-# if model is None or base_df.empty:
-#     st.warning("⚠️ Missing essential resources (model/data). Please verify setup.")
-#     st.stop()
-
-# Prepare combined data
-# common_cols = base_df.columns
-# if not synthetic_df.empty:
-#     common_cols = common_cols.intersection(synthetic_df.columns)
-# combined_df = pd.concat([base_df[common_cols], synthetic_df.get(common_cols, pd.DataFrame())], ignore_index=True)
-
 
 # === SHAP Visualization Helper ===
 def st_shap(plot, height=None):
@@ -489,82 +448,7 @@ with tab1:
                 st.error("❌ Jake AI failed to process the treatment plan.")
                 st.exception(e)
                 response_text = ""
-        # # with st.spinner("🔬 Analyzing treatment options using Jake..."):
-        # #     try:
-        # #         response = client.models.generate_content(
-        # #             model="gemini-1.5-flash",
-        # #             contents=prompt
-        # #         )
-
-        # #         response_text = response.text or ""
-
-        # #         st.markdown("### 🧠 Jake's Auto Analysis")
-        # #         st.success("✅ Jake's AI-driven treatment suggestions:")
-        # #         st.markdown(response_text)
-
-        # #         st.warning(
-        # #             "⚠️ Disclaimer: Always consult a certified medical professional."
-        # #         )
-
-        # #     except Exception as e:
-        # #         st.error("❌ Jake AI failed to process the treatment plan.")
-        # #         st.exception(e)
-        # #         response_text = ""
-
-        #  prompt = (
-        #             f"{health_summary.strip()}\n\n"
-        #             "Based on the patient's complete profile and identified health risks, provide the following details:\n"
-        #             "1. Likely cause(s) of the health risk.\n"
-        #             "2. Recommended lifestyle, dietary, or behavioral changes.\n"
-        #             "3. A detailed and specific treatment plan tailored to the condition.\n"
-        #             "4. Exact **medication names (generic or brand)** that are commonly prescribed for this condition globally,\n"
-        #             "   including the dosage form (e.g., tablet, capsule, injection), standard dosage range (if available),\n"
-        #             "   and any important administration guidelines.\n"
-        #             "5. Specialist doctor recommendations (if any).\n"
-        #             "6. Rationale behind the treatment and medicine choice.\n"
-        #             "7. Include warnings or contraindications for the mentioned medications.\n\n"
-        #             "Only suggest medicines that are clinically approved and widely used. If no medicine is applicable, state clearly."
-        #         )
         
-        # with st.spinner("🔬 Analyzing treatment options using Jake..."):
-        #     try:
-        #         response = client.models.generate_content(
-        #             model="gemini-1.5-flash",
-        #             contents=prompt
-        #         )
-        #         # chat_model = genai.GenerativeModel("gemini-1.5-flash")
-        #         # chat = chat_model.start_chat(history=[])
-        #         # prompt = (
-        #         #     f"{health_summary.strip()}\n\n"
-        #         #     "Based on the patient's complete profile and identified health risks, provide the following details:\n"
-        #         #     "1. Likely cause(s) of the health risk.\n"
-        #         #     "2. Recommended lifestyle, dietary, or behavioral changes.\n"
-        #         #     "3. A detailed and specific treatment plan tailored to the condition.\n"
-        #         #     "4. Exact **medication names (generic or brand)** that are commonly prescribed for this condition globally,\n"
-        #         #     "   including the dosage form (e.g., tablet, capsule, injection), standard dosage range (if available),\n"
-        #         #     "   and any important administration guidelines.\n"
-        #         #     "5. Specialist doctor recommendations (if any).\n"
-        #         #     "6. Rationale behind the treatment and medicine choice.\n"
-        #         #     "7. Include warnings or contraindications for the mentioned medications.\n\n"
-        #         #     "Only suggest medicines that are clinically approved and widely used. If no medicine is applicable, state clearly."
-        #         # )
-        #         # ai_response = chat.send_message(prompt)
-        #         response_text = ai_response.text or ""
-        #         st.markdown("### 🧠 Jake's Auto Analysis")
-        #         st.success("✅ Jake's AI-driven treatment suggestions:")
-        #         try:
-        #             st.markdown(response_text)
-        #         except Exception:
-        #             st.code(response_text)
-
-        #             st.warning(
-        #                 "⚠️ Disclaimer: This is an AI-generated suggestion. Always consult a certified medical professional before starting any medication."
-        #             )
-        #     except Exception as e:
-        #         st.error("❌ Jake AI failed to process the treatment plan.")
-        #         st.exception(e)
-        #         response_text = ""
-
         # 5) PDF Export
         if response_text:
             pdf_file = generate_pdf_report(health_summary, response_text)
@@ -1028,30 +912,7 @@ with tab4:
                 except Exception as e:
                     st.error("❌ Jake AI failed to process the question.")
                     st.exception(e)
-# with tab4:
-#     st.subheader("🤖 Jake's Chat Assistant")
-#     st.markdown(
-#         "Ask personalized health questions and get dynamic responses from Jake AI."
-#     )
-
-#     user_input = st.text_area("💬 Enter your question:")
-#     if st.button("🚀 Ask Jake AI"):
-#         if not user_input.strip():
-#             st.warning("⚠️ Please enter a question before submitting.")
-#         else:
-#             with st.spinner("Jake is thinking..."):
-#                 try:
-#                     chat_model = genai.GenerativeModel(
-#                         "gemini-1.5-flash")
-#                     chat = chat_model.start_chat(history=[])
-#                     context = st.session_state.get("health_summary", "")
-#                     prompt = f"{context}\n\nPatient's Question: {user_input.strip()}"
-#                     response = chat.send_message(prompt)
-#                     st.markdown(response.text or "")
-#                 except Exception as e:
-#                     st.error("❌ Jake AI failed to process the question.")
-#                     st.exception(e)
-
+                    
 # === Tab 5: About ===
 with tab5:
     st.subheader("ℹ️ About This App")
