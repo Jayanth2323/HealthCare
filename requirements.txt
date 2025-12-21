@@ -31,7 +31,6 @@ git-filter-repo==2.47.0
 gitdb==4.0.12
 GitPython==3.1.44
 google-api-core==2.17.0
-google-api-python-client==2.172.0
 google-auth==2.40.3
 google-auth-httplib2==0.2.0
 google-cloud-aiplatform==1.97.0
@@ -40,8 +39,8 @@ google-cloud-core==2.4.3
 google-cloud-resource-manager==1.14.2
 google-cloud-storage==2.19.0
 google-crc32c==1.7.1
-google-generativeai==0.3.2
 streamlit>=1.45.0
+google-genai==1.19.0
 python-dotenv
 google-resumable-media==2.7.2
 googleapis-common-protos==1.70.0
@@ -133,6 +132,7 @@ wcwidth==0.2.13
 webencodings==0.5.1
 websockets==15.0.1
 yarg==0.1.9
+
 
 
 
