@@ -152,7 +152,7 @@ if not os.getenv("GOOGLE_API_KEY"):
     st.stop()
 
 # Initialize Gemini client (NEW SDK – correct way)
-client = genai.Client(api_key=api_key)
+# client = genai.Client(api_key=api_key)
 
 # === Streamlit Setup ===
 st.set_page_config(
