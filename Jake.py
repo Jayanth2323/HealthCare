@@ -8,7 +8,7 @@ import pandas as pd
 import joblib
 import plotly.express as px
 import plotly.graph_objects as go
-import google.generativeai as genai
+from google import genai
 import shap
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -141,9 +141,11 @@ def generate_pdf_report(health_summary: str, ai_response: str) -> str:
 load_dotenv()
 
 # Fetch API key (works for both local + Streamlit Cloud)
-api_key = os.getenv("GOOGLE_API_KEY")
+client = genai.Client(
+    api_key = os.getenv("GOOGLE_API_KEY")
+)
 
-if not api_key:
+if not os.getenv("GOOGLE_API_KEY"):
     st.error(
         "❌ Gemini API key not found. Please configure GOOGLE_API_KEY in Streamlit Secrets or environment variables."
     )
@@ -428,8 +430,10 @@ with tab1:
 
         with st.spinner("🔬 Analyzing treatment options using Jake..."):
             try:
-                model = genai.GenerativeModel("gemini-pro")
-                response = model.generate_content(prompt)
+                response = client.models.generate_content(
+                    model = "gemini-1.5-flash-001",
+                    contents=prompt
+                )
 
                 response_text = response.text or ""
 
@@ -897,41 +901,15 @@ with tab4:
                     context = st.session_state.get("health_summary", "")
                     prompt = f"{context}\n\nPatient's Question: {user_input.strip()}"
                     
-                    model = genai.GenerativeModel("gemini-pro")
-                    response = model.generate_content(prompt)
+                    response = client.models.generate_content(
+                        model = "gemini-1.5-flash-001",
+                        contents=prompt
+                    )
 
                     st.markdown(response.text or "")
                 except Exception as e:
                     st.error("❌ Jake AI failed to process the question.")
                     st.exception(e)
-
-# with tab4:
-#     st.subheader("🤖 Jake's Chat Assistant")
-#     st.markdown(
-#         "Ask personalized health questions and get dynamic responses from Jake AI."
-#     )
-
-#     user_input = st.text_area("💬 Enter your question:")
-
-#     if st.button("🚀 Ask Jake AI"):
-#         if not user_input.strip():
-#             st.warning("⚠️ Please enter a question before submitting.")
-#         else:
-#             with st.spinner("Jake is thinking..."):
-#                 try:
-#                     context = st.session_state.get("health_summary", "")
-#                     prompt = f"{context}\n\nPatient's Question:\n{user_input.strip()}"
-
-#                     response = client.models.generate_content(
-#                         model="gemini-1.5-pro",
-#                         contents=prompt
-#                     )
-
-#                     st.markdown(response.text or "")
-
-#                 except Exception as e:
-#                     st.error("❌ Jake AI failed to process the question.")
-#                     st.exception(e)
                     
 # === Tab 5: About ===
 with tab5:
